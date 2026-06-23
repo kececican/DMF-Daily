@@ -2,183 +2,175 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>DMF Daily – Üretim Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg: #0f1117; --surface: #1a1d27; --surface2: #242736;
-      --border: #2e3348; --text: #e2e8f0; --muted: #8892a4; --accent: #3b82f6;
-    }
-    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--bg:#0f1117;--sur:#1a1d27;--sur2:#242736;--brd:#2e3348;--txt:#e2e8f0;--mut:#8892a4;--acc:#3b82f6}
+    body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px}
 
-    .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
-    .header h1 { font-size: 18px; font-weight: 600; color: #fff; }
-    .header .meta { font-size: 12px; color: var(--muted); }
+    .hdr{background:var(--sur);border-bottom:1px solid var(--brd);padding:13px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
+    .hdr h1{font-size:17px;font-weight:600;color:#fff}
+    .hdr .upd{font-size:12px;color:var(--mut)}
 
-    .tabs { display: flex; gap: 2px; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; }
-    .tab { padding: 12px 20px; cursor: pointer; border-bottom: 2px solid transparent; color: var(--muted); font-weight: 500; transition: all .15s; white-space: nowrap; user-select: none; }
-    .tab:hover { color: var(--text); }
-    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tabs{display:flex;background:var(--sur);border-bottom:1px solid var(--brd);padding:0 20px;overflow-x:auto}
+    .tab{padding:11px 18px;cursor:pointer;border-bottom:2px solid transparent;color:var(--mut);font-weight:500;white-space:nowrap;user-select:none;transition:color .15s}
+    .tab:hover{color:var(--txt)}
+    .tab.active{color:var(--acc);border-bottom-color:var(--acc)}
 
-    .screen { display: none; padding: 24px; max-width: 1600px; margin: 0 auto; }
-    .screen.active { display: block; }
+    .screen{display:none;padding:22px;max-width:1700px;margin:0 auto}
+    .screen.active{display:block}
 
-    /* E1 KPI */
-    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; margin-bottom: 24px; }
-    .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
-    .kpi-hat { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 12px; }
-    .kpi-row { margin-bottom: 8px; }
-    .kpi-label { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
-    .kpi-val { font-size: 21px; font-weight: 700; color: #fff; line-height: 1.1; }
-    .kpi-sub { font-size: 11px; color: var(--muted); }
-    .trp-bar { height: 6px; background: var(--border); border-radius: 3px; margin-top: 6px; overflow: hidden; }
-    .trp-fill { height: 100%; border-radius: 3px; }
-    .kpi-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
-    .kpi-mini-item .kpi-label { font-size: 10px; }
-    .kpi-mini-item .kpi-val { font-size: 15px; }
+    /* KPI */
+    .kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:13px;margin-bottom:22px}
+    .kcard{background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:15px}
+    .khat{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:11px}
+    .krow{margin-bottom:7px}
+    .klabel{font-size:11px;color:var(--mut);margin-bottom:1px}
+    .kval{font-size:20px;font-weight:700;color:#fff;line-height:1.1}
+    .ksub{font-size:11px;color:var(--mut)}
+    .trpbar{height:5px;background:var(--brd);border-radius:3px;margin-top:5px;overflow:hidden}
+    .trpfill{height:100%;border-radius:3px}
+    .kmini{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:9px}
+    .kmini .kval{font-size:15px}
+
+    /* SMF card */
+    .smf-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:13px;margin-bottom:22px}
+    .smfcard{background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:15px;border-top:3px solid #FF9800}
 
     /* Charts */
-    .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
-    .chart-row.full { grid-template-columns: 1fr; }
-    .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
-    .chart-title { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 16px; }
-    .chart-wrap { position: relative; height: 280px; }
+    .crow{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:20px}
+    .crow.full{grid-template-columns:1fr}
+    .crow.three{grid-template-columns:1fr 1fr 1fr}
+    .ccard{background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:18px}
+    .ctitle{font-size:11px;font-weight:600;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px}
+    .cwrap{position:relative;height:270px}
 
-    /* Hat filter buttons */
-    .hat-filter { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; align-items: center; }
-    .hat-filter label { font-size: 12px; color: var(--muted); }
-    .hat-btn { padding: 5px 13px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-size: 12px; font-weight: 600; transition: all .15s; }
-    .hat-btn.on { color: #fff; border-color: transparent; }
+    /* Hat filter */
+    .hfilt{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px;align-items:center}
+    .hfilt span{font-size:12px;color:var(--mut)}
+    .hbtn{padding:4px 12px;border-radius:16px;border:1px solid var(--brd);background:transparent;color:var(--mut);cursor:pointer;font-size:12px;font-weight:600;transition:all .15s}
+    .hbtn.on{color:#fff;border-color:transparent}
 
-    /* E3 */
-    .pareto-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    /* Hat select for ref/vardiya */
+    .hat-sel{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+    .hat-sel span{font-size:12px;color:var(--mut)}
+    .hat-sel select{background:var(--sur2);border:1px solid var(--brd);color:var(--txt);padding:6px 10px;border-radius:6px;font-size:13px}
 
-    /* E4 Table */
-    .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: auto; }
-    .filter-bar { display: flex; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; align-items: center; }
-    .filter-bar select, .filter-bar input {
-      background: var(--surface2); border: 1px solid var(--border); color: var(--text);
-      padding: 6px 10px; border-radius: 6px; font-size: 13px;
-    }
-    table { width: 100%; border-collapse: collapse; min-width: 700px; }
-    th { background: var(--surface2); padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; border-bottom: 1px solid var(--border); white-space: nowrap; }
-    td { padding: 9px 14px; border-bottom: 1px solid var(--border); font-size: 13px; }
-    tr:last-child td { border-bottom: none; }
-    tr:hover td { background: var(--surface2); }
-    .badge { display: inline-block; padding: 2px 9px; border-radius: 12px; font-size: 11px; font-weight: 600; white-space: nowrap; }
-    .b-ariza   { background: #7f1d1d33; color: #fca5a5; border: 1px solid #7f1d1d; }
-    .b-kalite  { background: #78350f33; color: #fcd34d; border: 1px solid #78350f; }
-    .b-parca   { background: #1e3a5f33; color: #93c5fd; border: 1px solid #1e3a5f; }
-    .b-setup   { background: #1a3a1a33; color: #86efac; border: 1px solid #1a3a1a; }
-    .b-metod   { background: #2e1a4a33; color: #c4b5fd; border: 1px solid #2e1a4a; }
-    .b-plan    { background: #1a2e2e33; color: #6ee7b7; border: 1px solid #1a2e2e; }
-    .b-diger   { background: #2a2a2a33; color: #d1d5db; border: 1px solid #2a2a2a; }
+    /* Table */
+    .twrap{background:var(--sur);border:1px solid var(--brd);border-radius:10px;overflow:auto}
+    .fbar{display:flex;gap:9px;padding:13px 15px;border-bottom:1px solid var(--brd);flex-wrap:wrap;align-items:center}
+    .fbar select,.fbar input{background:var(--sur2);border:1px solid var(--brd);color:var(--txt);padding:6px 10px;border-radius:6px;font-size:13px}
+    table{width:100%;border-collapse:collapse;min-width:680px}
+    th{background:var(--sur2);padding:9px 13px;text-align:left;font-size:11px;font-weight:600;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--brd);white-space:nowrap}
+    td{padding:8px 13px;border-bottom:1px solid var(--brd);font-size:13px}
+    tr:last-child td{border-bottom:none}
+    tr:hover td{background:var(--sur2)}
+    .badge{display:inline-block;padding:2px 8px;border-radius:11px;font-size:11px;font-weight:600;white-space:nowrap}
+    .ba{background:#7f1d1d33;color:#fca5a5;border:1px solid #7f1d1d}
+    .bk{background:#78350f33;color:#fcd34d;border:1px solid #78350f}
+    .bp{background:#1e3a5f33;color:#93c5fd;border:1px solid #1e3a5f}
+    .bs{background:#1a3a1a33;color:#86efac;border:1px solid #1a3a1a}
+    .bm{background:#2e1a4a33;color:#c4b5fd;border:1px solid #2e1a4a}
+    .bl{background:#1a2e2e33;color:#6ee7b7;border:1px solid #1a2e2e}
+    .bd{background:#2a2a2a33;color:#d1d5db;border:1px solid #2a2a2a}
 
-    @media (max-width: 900px) {
-      .chart-row, .pareto-grid { grid-template-columns: 1fr; }
-    }
+    @media(max-width:900px){.crow,.crow.three{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
 
-<div class="header">
+<div class="hdr">
   <h1>⚙ DMF Daily — Üretim Takip Dashboard</h1>
-  <span class="meta" id="meta-date"></span>
+  <span class="upd" id="upd-date"></span>
 </div>
 
 <div class="tabs">
-  <div class="tab active"  onclick="showTab('e1',this)">📊 KPI Özet</div>
-  <div class="tab"         onclick="showTab('e2',this)">📈 Üretim Trendi</div>
-  <div class="tab"         onclick="showTab('e3',this)">⏱ Duruş Analizi</div>
-  <div class="tab"         onclick="showTab('e4',this)">📋 Duruş Detay</div>
+  <div class="tab active"  onclick="T('e1',this)">📊 KPI Özet</div>
+  <div class="tab"         onclick="T('e2',this)">📈 Üretim Trendi</div>
+  <div class="tab"         onclick="T('e3',this)">🔀 Vardiya Analizi</div>
+  <div class="tab"         onclick="T('e4',this)">🏷 Referans Dağılımı</div>
+  <div class="tab"         onclick="T('e5',this)">⏱ Duruş Analizi</div>
+  <div class="tab"         onclick="T('e6',this)">📋 Duruş Detay</div>
 </div>
 
-<!-- E1 -->
+<!-- E1: KPI -->
 <div id="screen-e1" class="screen active">
   <div class="kpi-grid" id="kpi-grid"></div>
-  <div class="chart-row">
-    <div class="chart-card">
-      <div class="chart-title">Aylık Üretim — DMF Hatları</div>
-      <div class="chart-wrap"><canvas id="ch-monthly-dmf"></canvas></div>
-    </div>
-    <div class="chart-card">
-      <div class="chart-title">Aylık Üretim — PFW & ITL Hatları</div>
-      <div class="chart-wrap"><canvas id="ch-monthly-pfw"></canvas></div>
-    </div>
+
+  <div style="font-size:12px;font-weight:600;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">SMF-DOOSAN (Aralık 2025 – Şubat 2026)</div>
+  <div class="smf-row" id="smf-cards"></div>
+
+  <div class="crow">
+    <div class="ccard"><div class="ctitle">Aylık Üretim — DMF Hatları</div><div class="cwrap"><canvas id="ch-m-dmf"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">Aylık Üretim — PFW & ITL</div><div class="cwrap"><canvas id="ch-m-pfw"></canvas></div></div>
+  </div>
+  <div class="crow full">
+    <div class="ccard"><div class="ctitle">SMF-DOOSAN Günlük Üretim</div><div class="cwrap" style="height:220px"><canvas id="ch-smf"></canvas></div></div>
   </div>
 </div>
 
-<!-- E2 -->
+<!-- E2: Trend -->
 <div id="screen-e2" class="screen">
-  <div class="hat-filter">
-    <span style="font-size:12px;color:var(--muted)">Hat seç:</span>
-    <div id="hat-filter-btns"></div>
-  </div>
-  <div class="chart-row full">
-    <div class="chart-card">
-      <div class="chart-title">Haftalık Üretim Trendi (Adet)</div>
-      <div class="chart-wrap" style="height:320px"><canvas id="ch-trend-prod"></canvas></div>
-    </div>
-  </div>
-  <div class="chart-row full">
-    <div class="chart-card">
-      <div class="chart-title">Haftalık TRP (%) — Vardiya Başına Ortalama</div>
-      <div class="chart-wrap" style="height:300px"><canvas id="ch-trend-trp"></canvas></div>
-    </div>
-  </div>
+  <div class="hfilt"><span>Hat:</span><div id="hf-btns"></div></div>
+  <div class="crow full"><div class="ccard"><div class="ctitle">Haftalık Üretim Trendi (Adet)</div><div class="cwrap" style="height:310px"><canvas id="ch-tw-prod"></canvas></div></div></div>
+  <div class="crow full"><div class="ccard"><div class="ctitle">Haftalık TRP (%) — Vardiya Başına Ortalama</div><div class="cwrap" style="height:280px"><canvas id="ch-tw-trp"></canvas></div></div></div>
 </div>
 
-<!-- E3 -->
+<!-- E3: Vardiya -->
 <div id="screen-e3" class="screen">
-  <div class="pareto-grid">
-    <div class="chart-card">
-      <div class="chart-title">Duruş Sebebi Pareto (dk)</div>
-      <div class="chart-wrap" style="height:360px"><canvas id="ch-pareto-cat"></canvas></div>
-    </div>
-    <div class="chart-card">
-      <div class="chart-title">Hat Bazında Toplam Duruş (dk)</div>
-      <div class="chart-wrap" style="height:360px"><canvas id="ch-pareto-hat"></canvas></div>
-    </div>
+  <div class="hat-sel"><span>Hat:</span><select id="vrd-hat-sel" onchange="renderVardiya()"></select></div>
+  <div class="crow">
+    <div class="ccard"><div class="ctitle">Aylık Ortalama Vardiya Üretimi (Adet/Shift)</div><div class="cwrap" style="height:300px"><canvas id="ch-vrd-aylik"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">Vardiya Toplam Dağılımı (Tüm Dönem)</div><div class="cwrap" style="height:300px"><canvas id="ch-vrd-pie"></canvas></div></div>
   </div>
-  <div class="chart-row full">
-    <div class="chart-card">
-      <div class="chart-title">Aylık Duruş Dağılımı — Sebep Bazında (dk)</div>
-      <div class="chart-wrap" style="height:300px"><canvas id="ch-durus-aylik"></canvas></div>
-    </div>
+  <div class="crow full">
+    <div class="ccard"><div class="ctitle">Haftalık TRP — Vardiya Bazında Karşılaştırma</div><div class="cwrap" style="height:280px"><canvas id="ch-vrd-trp"></canvas></div></div>
   </div>
 </div>
 
-<!-- E4 -->
+<!-- E4: Referans -->
 <div id="screen-e4" class="screen">
-  <div class="table-wrap">
-    <div class="filter-bar">
-      <select id="f-hat"     onchange="filterTable()"><option value="">Tüm Hatlar</option></select>
-      <select id="f-sebep"   onchange="filterTable()"><option value="">Tüm Sebepler</option></select>
-      <select id="f-vardiya" onchange="filterTable()">
-        <option value="">Tüm Vardiyalar</option>
-        <option>A</option><option>B</option><option>C</option>
-      </select>
-      <input type="text" id="f-text" placeholder="Açıklama ara…" oninput="filterTable()" style="flex:1;min-width:180px">
-      <span id="row-count" style="font-size:12px;color:var(--muted);white-space:nowrap"></span>
+  <div class="hat-sel"><span>Hat:</span><select id="ref-hat-sel" onchange="renderRef()"></select></div>
+  <div class="crow">
+    <div class="ccard"><div class="ctitle">Referans Bazında Toplam Üretim (Adet)</div><div class="cwrap" style="height:340px"><canvas id="ch-ref-bar"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">Referans Üretim Payı (%)</div><div class="cwrap" style="height:340px"><canvas id="ch-ref-pie"></canvas></div></div>
+  </div>
+</div>
+
+<!-- E5: Duruş -->
+<div id="screen-e5" class="screen">
+  <div class="crow">
+    <div class="ccard"><div class="ctitle">Duruş Sebebi Pareto (dk)</div><div class="cwrap" style="height:350px"><canvas id="ch-pc"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">Hat Bazında Toplam Duruş (dk)</div><div class="cwrap" style="height:350px"><canvas id="ch-ph"></canvas></div></div>
+  </div>
+  <div class="crow full">
+    <div class="ccard"><div class="ctitle">Aylık Duruş — Sebep Dağılımı (dk)</div><div class="cwrap" style="height:290px"><canvas id="ch-durus-ay"></canvas></div></div>
+  </div>
+</div>
+
+<!-- E6: Detay -->
+<div id="screen-e6" class="screen">
+  <div class="twrap">
+    <div class="fbar">
+      <select id="f-hat"     onchange="flt()"><option value="">Tüm Hatlar</option></select>
+      <select id="f-sebep"   onchange="flt()"><option value="">Tüm Sebepler</option></select>
+      <select id="f-vardiya" onchange="flt()"><option value="">Vardiya</option><option>A</option><option>B</option><option>C</option></select>
+      <input  id="f-text" type="text" placeholder="Açıklama ara…" oninput="flt()" style="flex:1;min-width:160px">
+      <span id="fcount" style="font-size:12px;color:var(--mut);white-space:nowrap"></span>
     </div>
     <table>
-      <thead>
-        <tr>
-          <th>Tarih</th><th>Vrd.</th><th>Hat</th>
-          <th>Duruş Sebebi</th><th>Süre (dk)</th><th>Açıklama</th><th>OP</th>
-        </tr>
-      </thead>
-      <tbody id="durus-tbody"></tbody>
+      <thead><tr><th>Tarih</th><th>Vrd.</th><th>Hat</th><th>Sebep</th><th>Süre(dk)</th><th>Açıklama</th><th>OP</th></tr></thead>
+      <tbody id="dur-tbody"></tbody>
     </table>
   </div>
 </div>
 
 <script>
-const DATA = {
+const D  = {
   "meta": {
-    "guncelleme": "23.06.2026 07:29",
+    "guncelleme": "23.06.2026 11:16",
     "hatlar": [
       "DMF1",
       "DMF2",
@@ -193,79 +185,181 @@ const DATA = {
   },
   "kpi": {
     "DMF1": {
-      "toplam_uretim": 162334,
-      "son_ay_uretim": 20986,
-      "toplam_durus_dk": 80082.0,
-      "toplam_rework": 3219,
-      "toplam_iskarta": 217,
-      "ort_trp": 0.538
+      "toplam": 162334,
+      "son_ay": 20986,
+      "rework": 3219,
+      "iskarta": 217,
+      "ort_trp": 0.535
     },
     "DMF2": {
-      "toplam_uretim": 162778,
-      "son_ay_uretim": 21901,
-      "toplam_durus_dk": 82522.0,
-      "toplam_rework": 2250,
-      "toplam_iskarta": 247,
-      "ort_trp": 0.674
+      "toplam": 162778,
+      "son_ay": 21901,
+      "rework": 2250,
+      "iskarta": 247,
+      "ort_trp": 0.601
     },
     "DMF3": {
-      "toplam_uretim": 116191,
-      "son_ay_uretim": 20098,
-      "toplam_durus_dk": 97562.0,
-      "toplam_rework": 4694,
-      "toplam_iskarta": 166,
-      "ort_trp": 0.552
+      "toplam": 116191,
+      "son_ay": 20098,
+      "rework": 4694,
+      "iskarta": 166,
+      "ort_trp": 0.494
     },
     "DMF4": {
-      "toplam_uretim": 177112,
-      "son_ay_uretim": 24507,
-      "toplam_durus_dk": 61639.0,
-      "toplam_rework": 2830,
-      "toplam_iskarta": 1315,
-      "ort_trp": 0.701
+      "toplam": 177112,
+      "son_ay": 24507,
+      "rework": 2830,
+      "iskarta": 1315,
+      "ort_trp": 0.615
     },
     "PFW1": {
-      "toplam_uretim": 147760,
-      "son_ay_uretim": 20629,
-      "toplam_durus_dk": 45372.0,
-      "toplam_rework": 0,
-      "toplam_iskarta": 0,
-      "ort_trp": 0.573
+      "toplam": 147760,
+      "son_ay": 20629,
+      "rework": 0,
+      "iskarta": 0,
+      "ort_trp": 0.597
     },
     "PFW2": {
-      "toplam_uretim": 156337,
-      "son_ay_uretim": 22189,
-      "toplam_durus_dk": 63164.0,
-      "toplam_rework": 0,
-      "toplam_iskarta": 0,
-      "ort_trp": 0.649
+      "toplam": 156337,
+      "son_ay": 22189,
+      "rework": 0,
+      "iskarta": 0,
+      "ort_trp": 0.603
     },
     "PFW3": {
-      "toplam_uretim": 126446,
-      "son_ay_uretim": 19623,
-      "toplam_durus_dk": 57021.0,
-      "toplam_rework": 0,
-      "toplam_iskarta": 0,
-      "ort_trp": 0.618
+      "toplam": 126446,
+      "son_ay": 19623,
+      "rework": 0,
+      "iskarta": 0,
+      "ort_trp": 0.577
     },
     "PFW4": {
-      "toplam_uretim": 180366,
-      "son_ay_uretim": 24870,
-      "toplam_durus_dk": 53712.0,
-      "toplam_rework": 0,
-      "toplam_iskarta": 0,
-      "ort_trp": 0.695
+      "toplam": 180366,
+      "son_ay": 24870,
+      "rework": 0,
+      "iskarta": 0,
+      "ort_trp": 0.664
     },
     "ITL": {
-      "toplam_uretim": 154320,
-      "son_ay_uretim": 19333,
-      "toplam_durus_dk": 38437.0,
-      "toplam_rework": 0,
-      "toplam_iskarta": 0,
+      "toplam": 154320,
+      "son_ay": 19333,
+      "rework": 0,
+      "iskarta": 0,
       "ort_trp": 0.817
     }
   },
-  "haftalik_etiketler": [
+  "smf_kpi": {
+    "jx22_toplam": 7437,
+    "eb2_toplam": 10147,
+    "toplam": 17584,
+    "nok": 136,
+    "aktif_gun": 24
+  },
+  "smf_dates": [
+    "2025-12-01",
+    "2025-12-02",
+    "2026-01-14",
+    "2026-01-15",
+    "2026-01-16",
+    "2026-01-18",
+    "2026-01-19",
+    "2026-01-21",
+    "2026-01-22",
+    "2026-01-23",
+    "2026-01-24",
+    "2026-01-25",
+    "2026-01-26",
+    "2026-01-27",
+    "2026-01-28",
+    "2026-01-29",
+    "2026-01-30",
+    "2026-01-31",
+    "2026-02-01",
+    "2026-02-04",
+    "2026-02-05",
+    "2026-02-06",
+    "2026-02-07",
+    "2026-02-08"
+  ],
+  "smf_jx22": [
+    584.0,
+    798.0,
+    0.0,
+    0.0,
+    387.0,
+    103.0,
+    0.0,
+    660.0,
+    135.0,
+    0.0,
+    670.0,
+    1023.0,
+    588.0,
+    334.0,
+    668.0,
+    347.0,
+    89.0,
+    324.0,
+    727.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "smf_eb2": [
+    312.0,
+    478.0,
+    450.0,
+    450.0,
+    0.0,
+    552.0,
+    330.0,
+    335.0,
+    606.0,
+    990.0,
+    0.0,
+    0.0,
+    0.0,
+    688.0,
+    0.0,
+    751.0,
+    0.0,
+    0.0,
+    0.0,
+    460.0,
+    594.0,
+    1111.0,
+    1016.0,
+    1024.0
+  ],
+  "smf_total": [
+    896.0,
+    1276.0,
+    450.0,
+    450.0,
+    387.0,
+    655.0,
+    330.0,
+    995.0,
+    741.0,
+    990.0,
+    670.0,
+    1023.0,
+    588.0,
+    1022.0,
+    668.0,
+    1098.0,
+    89.0,
+    324.0,
+    727.0,
+    460.0,
+    594.0,
+    1111.0,
+    1016.0,
+    1024.0
+  ],
+  "haftalik_etiket": [
     "2026-H07",
     "2026-H08",
     "2026-H09",
@@ -489,180 +583,180 @@ const DATA = {
   },
   "haftalik_trp": {
     "DMF1": [
-      63.6,
-      59.2,
-      54.5,
-      59.3,
-      59.9,
-      71.3,
-      56.6,
-      54.4,
-      55.6,
-      52.0,
-      55.7,
-      40.2,
-      65.3,
-      57.6,
-      54.4,
-      40.2,
+      60.7,
+      59.7,
+      59.6,
+      56.7,
+      62.4,
+      66.5,
       53.1,
-      59.2,
-      48.4,
+      48.9,
+      51.0,
+      57.1,
+      50.3,
+      49.1,
+      57.9,
+      54.6,
+      49.7,
+      40.6,
+      49.6,
+      57.3,
+      53.4,
       59.6
     ],
     "DMF2": [
-      60.5,
-      47.4,
-      52.8,
-      52.3,
-      54.7,
-      61.4,
-      60.5,
-      62.3,
-      47.3,
-      71.7,
-      77.2,
-      64.6,
-      73.0,
-      73.0,
-      66.4,
-      67.8,
-      72.0,
-      69.9,
-      60.5,
+      53.5,
+      45.9,
+      51.0,
+      52.4,
+      55.2,
+      58.1,
+      58.5,
+      53.8,
+      49.8,
+      68.0,
+      75.0,
+      70.2,
+      72.4,
+      68.3,
+      65.5,
+      62.2,
+      66.6,
+      54.8,
+      58.0,
       68.2
     ],
     "DMF3": [
-      29.5,
+      28.5,
+      33.2,
       32.1,
-      33.9,
-      36.7,
-      37.9,
-      28.7,
-      30.9,
-      27.4,
-      40.1,
-      43.7,
-      65.1,
-      45.9,
-      51.2,
-      44.2,
-      54.1,
-      34.1,
-      51.3,
-      61.4,
-      55.6,
-      37.9
+      32.7,
+      32.7,
+      28.0,
+      31.6,
+      30.2,
+      31.8,
+      45.3,
+      55.9,
+      41.5,
+      41.0,
+      48.2,
+      46.9,
+      37.5,
+      51.9,
+      50.3,
+      48.6,
+      22.0
     ],
     "DMF4": [
-      63.7,
-      62.0,
-      57.7,
-      67.1,
-      55.8,
-      47.7,
-      60.7,
-      58.2,
-      56.6,
-      64.9,
-      79.1,
-      61.7,
-      58.7,
-      62.6,
-      63.7,
-      57.1,
-      67.7,
-      69.9,
-      70.4,
-      85.2
+      55.9,
+      51.5,
+      52.9,
+      61.5,
+      54.0,
+      49.1,
+      60.3,
+      57.5,
+      54.4,
+      63.4,
+      72.2,
+      65.5,
+      65.7,
+      60.5,
+      58.5,
+      63.1,
+      60.2,
+      63.9,
+      61.8,
+      48.1
     ],
     "PFW1": [
-      57.4,
-      64.1,
-      54.0,
-      74.6,
-      63.0,
-      62.4,
-      59.8,
-      59.1,
-      59.9,
-      69.6,
-      49.0,
-      61.3,
-      64.9,
-      74.9,
-      70.9,
-      52.8,
-      47.0,
-      67.5,
-      56.0,
+      62.2,
+      64.7,
+      66.0,
+      71.5,
+      64.3,
+      61.7,
+      58.9,
+      55.7,
+      63.6,
+      70.8,
+      52.9,
+      64.6,
+      62.9,
+      60.8,
+      56.7,
+      53.6,
+      56.7,
+      62.9,
+      58.5,
       75.9
     ],
     "PFW2": [
-      65.2,
-      56.5,
-      63.1,
-      64.6,
-      60.1,
-      65.6,
-      56.6,
-      49.0,
-      45.9,
-      57.0,
-      77.1,
-      71.6,
+      60.5,
+      49.2,
+      54.1,
+      56.7,
+      58.4,
+      61.8,
+      48.2,
+      46.6,
+      46.7,
+      53.4,
+      71.7,
+      70.1,
       64.2,
-      70.0,
-      72.3,
-      68.9,
-      64.1,
-      56.9,
-      72.3,
+      67.1,
+      71.1,
+      68.3,
+      65.0,
+      54.9,
+      60.3,
       74.0
     ],
     "PFW3": [
-      0,
-      48.2,
+      35.9,
+      50.1,
+      44.4,
+      47.2,
+      56.4,
+      49.6,
+      47.5,
+      47.3,
+      47.3,
       50.6,
-      62.6,
-      52.8,
-      67.3,
-      0,
-      40.2,
-      47.8,
-      54.5,
-      57.7,
-      55.7,
-      47.8,
-      58.4,
-      57.7,
-      48.7,
-      58.7,
-      59.7,
-      66.3,
+      60.6,
+      54.9,
+      55.3,
+      60.1,
+      54.3,
+      52.9,
+      59.2,
+      56.9,
+      57.1,
       0
     ],
     "PFW4": [
-      70.4,
-      61.1,
-      63.6,
-      60.5,
-      64.1,
-      65.6,
-      61.9,
       60.8,
-      75.7,
-      69.2,
-      73.9,
-      74.0,
-      56.7,
-      0,
-      0,
-      0,
-      0,
-      70.5,
-      67.9,
-      77.1
+      60.3,
+      62.4,
+      61.4,
+      58.1,
+      59.3,
+      57.7,
+      64.4,
+      64.0,
+      65.0,
+      72.5,
+      73.2,
+      66.9,
+      64.9,
+      69.7,
+      63.5,
+      69.5,
+      66.6,
+      65.5,
+      42.4
     ],
     "ITL": [
       79.9,
@@ -687,7 +781,7 @@ const DATA = {
       0
     ]
   },
-  "aylik_etiketler": [
+  "aylik_etiket": [
     "1900-01",
     "2026-01",
     "2026-02",
@@ -779,7 +873,416 @@ const DATA = {
       19333
     ]
   },
-  "durus_pareto_etiket": [
+  "vardiya_chart": {
+    "DMF1": {
+      "A": [
+        0,
+        328.0,
+        355.0,
+        367.0,
+        316.0,
+        330.0,
+        330.0
+      ],
+      "B": [
+        0,
+        286.0,
+        344.0,
+        347.0,
+        300.0,
+        311.0,
+        332.0
+      ],
+      "C": [
+        0,
+        305.0,
+        359.0,
+        361.0,
+        334.0,
+        311.0,
+        322.0
+      ]
+    },
+    "DMF2": {
+      "A": [
+        0,
+        313.0,
+        322.0,
+        334.0,
+        388.0,
+        404.0,
+        396.0
+      ],
+      "B": [
+        0,
+        232.0,
+        288.0,
+        295.0,
+        358.0,
+        393.0,
+        320.0
+      ],
+      "C": [
+        0,
+        273.0,
+        304.0,
+        350.0,
+        387.0,
+        388.0,
+        344.0
+      ]
+    },
+    "DMF3": {
+      "A": [
+        0,
+        220.0,
+        210.0,
+        213.0,
+        278.0,
+        302.0,
+        346.0
+      ],
+      "B": [
+        0,
+        196.0,
+        195.0,
+        187.0,
+        235.0,
+        257.0,
+        272.0
+      ],
+      "C": [
+        0,
+        227.0,
+        204.0,
+        200.0,
+        259.0,
+        284.0,
+        309.0
+      ]
+    },
+    "DMF4": {
+      "A": [
+        0,
+        359.0,
+        381.0,
+        357.0,
+        394.0,
+        380.0,
+        429.0
+      ],
+      "B": [
+        0,
+        328.0,
+        307.0,
+        335.0,
+        360.0,
+        372.0,
+        318.0
+      ],
+      "C": [
+        0,
+        340.0,
+        323.0,
+        358.0,
+        383.0,
+        412.0,
+        384.0
+      ]
+    },
+    "PFW1": {
+      "A": [
+        322.0,
+        454.0,
+        344.0,
+        361.0,
+        345.0,
+        375.0,
+        330.0
+      ],
+      "B": [
+        321.0,
+        430.0,
+        397.0,
+        352.0,
+        349.0,
+        334.0,
+        338.0
+      ],
+      "C": [
+        372.0,
+        365.0,
+        377.0,
+        375.0,
+        369.0,
+        329.0,
+        364.0
+      ]
+    },
+    "PFW2": {
+      "A": [
+        0,
+        316.0,
+        358.0,
+        350.0,
+        345.0,
+        398.0,
+        374.0
+      ],
+      "B": [
+        0,
+        298.0,
+        296.0,
+        290.0,
+        339.0,
+        385.0,
+        318.0
+      ],
+      "C": [
+        0,
+        319.0,
+        327.0,
+        325.0,
+        308.0,
+        388.0,
+        348.0
+      ]
+    },
+    "PFW3": {
+      "A": [
+        0,
+        304.0,
+        279.0,
+        321.0,
+        299.0,
+        310.0,
+        356.0
+      ],
+      "B": [
+        0,
+        265.0,
+        245.0,
+        263.0,
+        285.0,
+        344.0,
+        296.0
+      ],
+      "C": [
+        0,
+        284.0,
+        291.0,
+        316.0,
+        312.0,
+        327.0,
+        349.0
+      ]
+    },
+    "PFW4": {
+      "A": [
+        0,
+        363.0,
+        374.0,
+        360.0,
+        398.0,
+        386.0,
+        407.0
+      ],
+      "B": [
+        0,
+        366.0,
+        348.0,
+        313.0,
+        375.0,
+        387.0,
+        357.0
+      ],
+      "C": [
+        0,
+        350.0,
+        368.0,
+        357.0,
+        378.0,
+        403.0,
+        384.0
+      ]
+    },
+    "ITL": {
+      "A": [
+        0,
+        363.0,
+        496.0,
+        452.0,
+        367.0,
+        482.0,
+        443.0
+      ],
+      "B": [
+        0,
+        402.0,
+        373.0,
+        441.0,
+        402.0,
+        426.0,
+        395.0
+      ],
+      "C": [
+        0,
+        345.0,
+        397.0,
+        486.0,
+        400.0,
+        440.0,
+        428.0
+      ]
+    }
+  },
+  "ref_top": {
+    "DMF1": {
+      "labels": [
+        "4432GO",
+        "1048438RE",
+        "168055V1",
+        "172536V1",
+        "294535V1",
+        "342789V1",
+        "657735V1",
+        "199368V1"
+      ],
+      "data": [
+        56501,
+        20044,
+        17493,
+        16351,
+        6367,
+        5925,
+        5773,
+        5316
+      ]
+    },
+    "DMF2": {
+      "labels": [
+        "4432GO",
+        "905409RE",
+        "4432PI",
+        "905409MA",
+        "199368V1",
+        "274013V1",
+        "4432V1"
+      ],
+      "data": [
+        109672,
+        33935,
+        13670,
+        3543,
+        894,
+        563,
+        501
+      ]
+    },
+    "DMF3": {
+      "labels": [
+        "1079999RE",
+        "588374MA",
+        "4432GO",
+        "588321FF",
+        "1079999OR",
+        "199368V1",
+        "4432PI",
+        "588374MC"
+      ],
+      "data": [
+        36557,
+        20120,
+        18248,
+        11115,
+        6576,
+        5630,
+        3992,
+        3757
+      ]
+    },
+    "DMF4": {
+      "labels": [
+        "905409RE",
+        "602895FE",
+        "905409MA"
+      ],
+      "data": [
+        65645,
+        61652,
+        49393
+      ]
+    },
+    "PFW1": {
+      "labels": [
+        "1046369.0",
+        "1044552.0",
+        "1043134.0",
+        "657745.0",
+        "343840.0",
+        "597093.0",
+        "796093.0",
+        "513660V1"
+      ],
+      "data": [
+        58886,
+        36596,
+        28672,
+        5999,
+        5321,
+        4739,
+        4687,
+        2067
+      ]
+    },
+    "PFW2": {
+      "labels": [
+        "1046369.0",
+        "905658.0"
+      ],
+      "data": [
+        113313,
+        43024
+      ]
+    },
+    "PFW3": {
+      "labels": [
+        "1046369.0",
+        "1076136.0",
+        "72927.0",
+        "751542.0",
+        "996932.0",
+        "Çalışma Yok"
+      ],
+      "data": [
+        46090,
+        45679,
+        22999,
+        10836,
+        280,
+        71
+      ]
+    },
+    "PFW4": {
+      "labels": [
+        "905658.0",
+        "1033794.0"
+      ],
+      "data": [
+        116497,
+        63630
+      ]
+    },
+    "ITL": {
+      "labels": [
+        "905593.0"
+      ],
+      "data": [
+        154320
+      ]
+    }
+  },
+  "pareto_cat_etiket": [
     "Makine Arıza",
     "Sipariş Yok",
     "Metod-Arge",
@@ -794,7 +1297,7 @@ const DATA = {
     "Performans",
     "Eğitim"
   ],
-  "durus_pareto_deger": [
+  "pareto_cat_deger": [
     16667.0,
     10740.0,
     6742.0,
@@ -809,14 +1312,14 @@ const DATA = {
     245.0,
     20.0
   ],
-  "durus_hat_etiket": [
+  "pareto_hat_etiket": [
     "ITL",
     "DMF4",
     "DMF2",
     "DMF3",
     "PFW4"
   ],
-  "durus_hat_deger": [
+  "pareto_hat_deger": [
     18059.0,
     15536.0,
     7823.0,
@@ -1018,7 +1521,7 @@ const DATA = {
       "sebep": "Makine Arıza",
       "hat": "DMF4",
       "sure": 5.0,
-      "aciklama": "OP180 balans elemntı konum ayarı yapıldı   kafa acı ayarı yapıldı konumlama yapı",
+      "aciklama": "OP180 balans elemntı konum ayarı yapıldı   kafa acı ayarı yapıldı konumlama yapıldı",
       "op": "180.0"
     },
     {
@@ -1306,7 +1809,7 @@ const DATA = {
       "sebep": "Makine Arıza",
       "hat": "DMF4",
       "sure": 14.0,
-      "aciklama": "OP180 BALANS ELEMENTI LINEAR KANALDA ILERLEME YAPMIYOR. lınear kanal konum ayarı",
+      "aciklama": "OP180 BALANS ELEMENTI LINEAR KANALDA ILERLEME YAPMIYOR. lınear kanal konum ayarı yapıldı t",
       "op": "180.0"
     },
     {
@@ -1414,7 +1917,7 @@ const DATA = {
       "sebep": "Makine Arıza",
       "hat": "DMF4",
       "sure": 40.0,
-      "aciklama": "Hat İçi Arizalar Giderildi. ( Op:30 Start Almıyor. Op:30 Asansör Hareket Etmiyor",
+      "aciklama": "Hat İçi Arizalar Giderildi. ( Op:30 Start Almıyor. Op:30 Asansör Hareket Etmiyor.  Op:50 Y",
       "op": "Hat Genel"
     },
     {
@@ -1423,7 +1926,7 @@ const DATA = {
       "sebep": "Makine Arıza",
       "hat": "DMF4",
       "sure": 8.0,
-      "aciklama": "Op:70 Sıcaklık Hatasına Geçiyor. Op:75 Gripper Kapatıyor. Hafıza Karıştı. Reseta",
+      "aciklama": "Op:70 Sıcaklık Hatasına Geçiyor. Op:75 Gripper Kapatıyor. Hafıza Karıştı. Resetalbits yapı",
       "op": "75.0"
     },
     {
@@ -1945,7 +2448,7 @@ const DATA = {
       "sebep": "Makine Arıza",
       "hat": "DMF4",
       "sure": 20.0,
-      "aciklama": "Alt Dayamalar Yukarıda Alt pozisyona İnmiyor Bakım İle  Müdahale Edildi Devreye ",
+      "aciklama": "Alt Dayamalar Yukarıda Alt pozisyona İnmiyor Bakım İle  Müdahale Edildi Devreye Alındı ",
       "op": "180.0"
     },
     {
@@ -2089,7 +2592,7 @@ const DATA = {
       "sebep": "Makine Arıza",
       "hat": "DMF4",
       "sure": 15.0,
-      "aciklama": "OP100 Üst Tool Pokoyoke Sensörü Görmüyor Sensör Ayarı Yapıldı Üst Aparat Orta Gö",
+      "aciklama": "OP100 Üst Tool Pokoyoke Sensörü Görmüyor Sensör Ayarı Yapıldı Üst Aparat Orta Göbekten Gev",
       "op": "100.0"
     },
     {
@@ -2226,253 +2729,667 @@ const DATA = {
       "sure": 20.0,
       "aciklama": "OP75 Transfer Lift Palet Tutucu Havası Körlendi Tutucu SAbit Konuma Getirildi ",
       "op": "75.0"
+    },
+    {
+      "tarih": "2026-06-09",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 10.0,
+      "aciklama": "OP70 Parçayı Posa Oturtamadı Robot Hafızası Kariştı Reset All Bist Yapıldı ",
+      "op": "70.0"
+    },
+    {
+      "tarih": "2026-06-09",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 15.0,
+      "aciklama": "OP70 Robot Gripper Cetvel Hatası ",
+      "op": "70.0"
+    },
+    {
+      "tarih": "2026-06-09",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 10.0,
+      "aciklama": "OP180 Linear Kanalda Welding Sıkışması (2)",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-09",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 20.0,
+      "aciklama": "OP75 Transfer Lift Üst Konumda Kaldı Müdahale Edilidi (4)",
+      "op": "75.0"
+    },
+    {
+      "tarih": "2026-06-09",
+      "vardiya": "A",
+      "sebep": "Robot Arıza",
+      "hat": "DMF4",
+      "sure": 10.0,
+      "aciklama": "Final Robot Parçayı Postan Almadı (2)",
+      "op": "270.0"
+    },
+    {
+      "tarih": "2026-06-09",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 25.0,
+      "aciklama": "Transfer Lift Üst Konumda Kaldı Müdahale Edilidi (5) konum ayarı yapıldı.",
+      "op": "75.0"
+    },
+    {
+      "tarih": "2026-06-09",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 20.0,
+      "aciklama": "Op20 palet lıft pımı kırıldı hatalı olcum yapıyor pim değişimi yapıldı",
+      "op": "20.0"
+    },
+    {
+      "tarih": "2026-06-09",
+      "vardiya": "B",
+      "sebep": "Robot Arıza",
+      "hat": "DMF4",
+      "sure": 10.0,
+      "aciklama": "fınal robot secrep bandına bındırdı mudahale edıldı",
+      "op": "270.0"
+    },
+    {
+      "tarih": "2026-06-09",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 34.0,
+      "aciklama": "kep kanalda sıkısma 3x    sarsak temızlendı sensor ayarları yapıldı",
+      "op": "160.0"
+    },
+    {
+      "tarih": "2026-06-09",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 10.0,
+      "aciklama": "Op 20 1 Nolu Palet Olcum Hatasna Gecıyor",
+      "op": "20.0"
+    },
+    {
+      "tarih": "2026-06-09",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 15.0,
+      "aciklama": "op 160 yabancı madde sıkısması X3",
+      "op": "160.0"
+    },
+    {
+      "tarih": "2026-06-09",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op 160 Cap Kanala Ters Gırmıs",
+      "op": "160.0"
+    },
+    {
+      "tarih": "2026-06-09",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 8.0,
+      "aciklama": "Op 250 2X Vakum Hatası",
+      "op": "250.0"
+    },
+    {
+      "tarih": "2026-06-09",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Dengeleme Vakum Hatası",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-09",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Dengeleme Kaynak Yapılamadı Hatası",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-09",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 9.0,
+      "aciklama": "Op 100 PokaYoke Sensorunde 1 - 0 Yapıyor Istasyon Devam Etmıyor scadadan deger degiştiriyo",
+      "op": "100.0"
+    },
+    {
+      "tarih": "2026-06-08",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 17.0,
+      "aciklama": "Op:30 Asansör Üst konum Sensörlerin 1 i Görmüyor. Müdahale edildi.",
+      "op": "30.0"
+    },
+    {
+      "tarih": "2026-06-08",
+      "vardiya": "A",
+      "sebep": "Robot Arıza",
+      "hat": "DMF4",
+      "sure": 6.0,
+      "aciklama": "Op:270 Robot Buffer İstasyona Parça Koyamıyor. Müdahale Edildi.",
+      "op": "270.0"
+    },
+    {
+      "tarih": "2026-06-08",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 2.0,
+      "aciklama": "Op:75 Pens Hatası. Müdahale edildi.",
+      "op": "75.0"
+    },
+    {
+      "tarih": "2026-06-08",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op:180 Mesmatik Linear yolda Welding takıldı.",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-08",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 6.0,
+      "aciklama": "Op:210 Öncessi Paletler Liftte Karıştı. Müdahale edildi.",
+      "op": "210.0"
+    },
+    {
+      "tarih": "2026-06-08",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 6.0,
+      "aciklama": "Op:250 Datamatrix Vakum yapamadı. 2X",
+      "op": "250.0"
+    },
+    {
+      "tarih": "2026-06-08",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 7.0,
+      "aciklama": "op75 a tablası zorlanma hatası",
+      "op": "75.0"
+    },
+    {
+      "tarih": "2026-06-08",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 6.0,
+      "aciklama": "op20 kamera hatası",
+      "op": "20.0"
+    },
+    {
+      "tarih": "2026-06-08",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 3.0,
+      "aciklama": "op75 merkezleme hatası",
+      "op": "75.0"
+    },
+    {
+      "tarih": "2026-06-08",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 60.0,
+      "aciklama": "op75 transfer lıft paleti konumlayamıyor ",
+      "op": "75.0"
+    },
+    {
+      "tarih": "2026-06-08",
+      "vardiya": "C",
+      "sebep": "Set-Up",
+      "hat": "DMF4",
+      "sure": 200.0,
+      "aciklama": "V710 Setup",
+      "op": "Hat Genel"
+    },
+    {
+      "tarih": "2026-06-08",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 32.0,
+      "aciklama": "Op 70 & 75 Kafa Sıcaklık Hatasına Gecıyor  Envalop Ayarlandı",
+      "op": "70.0"
+    },
+    {
+      "tarih": "2026-06-08",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 37.0,
+      "aciklama": "OP 75 Transfer Palet Palet Tutucu Hatası ",
+      "op": "75.0"
+    },
+    {
+      "tarih": "2026-06-08",
+      "vardiya": "C",
+      "sebep": "Metod-Arge",
+      "hat": "DMF4",
+      "sure": 15.0,
+      "aciklama": "OP190 1 Nolu İstasyon Parçayı Oturtamıyor Açı verildi",
+      "op": "190.0"
+    },
+    {
+      "tarih": "2026-06-08",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 35.0,
+      "aciklama": "OP20 Kamera Hatası",
+      "op": "20.0"
+    },
+    {
+      "tarih": "2026-06-07",
+      "vardiya": "C",
+      "sebep": "Hat Besleme",
+      "hat": "DMF4",
+      "sure": 31.0,
+      "aciklama": "Hat Besleme/Malzeme Yükleme",
+      "op": "Hat Genel"
+    },
+    {
+      "tarih": "2026-06-07",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op:75 Parçayı Salmadı. Lift Yukarıda Conveyör Dönmüyor. Müdahale edildi.",
+      "op": "75.0"
+    },
+    {
+      "tarih": "2026-06-07",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op:70&75 Paletler Saldı. Liftlerin hafıza karıştı. Müdahale edildi.",
+      "op": "70.0"
+    },
+    {
+      "tarih": "2026-06-07",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 16.0,
+      "aciklama": "Op:250 Datamatrix Vakum yapamadı. 4X",
+      "op": "250.0"
+    },
+    {
+      "tarih": "2026-06-07",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 8.0,
+      "aciklama": "Op:70 Tablo 1 Pens Hatası. 2x Müdahale edildi.",
+      "op": "70.0"
+    },
+    {
+      "tarih": "2026-06-06",
+      "vardiya": "A",
+      "sebep": "Kalite Prob.",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op:110 Parça Üst Kalıba Sıkıştı. Konum Hatalı",
+      "op": "110.0"
+    },
+    {
+      "tarih": "2026-06-06",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op:180 Mesmatik Sarsakta Welding takıldı.",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-06",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op:70&75 Paletler Saldı. Liftlerin hafıza karıştı. Müdahale edildi.",
+      "op": "70.0"
+    },
+    {
+      "tarih": "2026-06-06",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op:180 Robot Bekliyor Tezgah hataya geçmiyor. Play ile devam ediyor.",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-06",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 10.0,
+      "aciklama": "Op:70 Parçayı Scrap Olarak Markalama İstasyonuna koymak istiyor. Otomatik yapmıyor. Manuel",
+      "op": "70.0"
+    },
+    {
+      "tarih": "2026-06-06",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 7.0,
+      "aciklama": "Op:180 De Hafıza Karıştı. Resetalbits yapıldı.",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-06",
+      "vardiya": "B",
+      "sebep": "Kalıp Arıza",
+      "hat": "DMF4",
+      "sure": 12.0,
+      "aciklama": "Envelop Üst Aparata Müdahale Edilid ",
+      "op": "230.0"
+    },
+    {
+      "tarih": "2026-06-06",
+      "vardiya": "B",
+      "sebep": "Robot Arıza",
+      "hat": "DMF4",
+      "sure": 8.0,
+      "aciklama": "OP270 Kasa Tam Oturmadıgı İçin Robot Çarpışma Hatası ",
+      "op": "270.0"
+    },
+    {
+      "tarih": "2026-06-06",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 7.0,
+      "aciklama": "OP75 Transfer Palet Lift Yukarıda Kaldı Manuel Müdahale Edilid ",
+      "op": "75.0"
+    },
+    {
+      "tarih": "2026-06-06",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 20.0,
+      "aciklama": "Asansör  Üst Sensör Görmüyor ",
+      "op": "30.0"
+    },
+    {
+      "tarih": "2026-06-06",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 2.0,
+      "aciklama": "Taşıyıcı Kol Üst Sensör Görmüyor Müdahale Edilidi",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-06",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 4.0,
+      "aciklama": "Merkezleme Hatası ",
+      "op": "75.0"
+    },
+    {
+      "tarih": "2026-06-06",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 6.0,
+      "aciklama": "OP200 OP210 Arasında Transfer Lift Palet Salmadı Müdahale Edildi ",
+      "op": "210.0"
+    },
+    {
+      "tarih": "2026-06-06",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Dengeleme Linear Yolunda Perçin Sıkıştı ",
+      "op": "180.0"
     }
   ]
 };
-const COLORS = {"DMF1": "#2196F3", "DMF2": "#4CAF50", "DMF3": "#FF9800", "DMF4": "#9C27B0", "PFW1": "#F44336", "PFW2": "#00BCD4", "PFW3": "#8BC34A", "PFW4": "#FF5722", "ITL": "#607D8B"};
+const HC = {"DMF1": "#2196F3", "DMF2": "#4CAF50", "DMF3": "#FF9800", "DMF4": "#9C27B0", "PFW1": "#F44336", "PFW2": "#00BCD4", "PFW3": "#8BC34A", "PFW4": "#FF5722", "ITL": "#607D8B"};
 
 // ── utils ──────────────────────────────────────────────────────────────────
-function hex2rgba(h, a=1) {
-  const r=parseInt(h.slice(1,3),16), g=parseInt(h.slice(3,5),16), b=parseInt(h.slice(5,7),16);
-  return `rgba(${r},${g},${b},${a})`;
-}
-function fmt(n) { return new Intl.NumberFormat('tr-TR').format(Math.round(n)); }
-
-function badgeCls(s) {
-  if (/Arıza|Robot/.test(s))  return 'b-ariza';
-  if (/Kalite/.test(s))       return 'b-kalite';
-  if (/Parça|Sipariş|Besleme/.test(s)) return 'b-parca';
-  if (/Set|Kesici/.test(s))   return 'b-setup';
-  if (/Metod|Arge/.test(s))   return 'b-metod';
-  if (/Planlı/.test(s))       return 'b-plan';
-  return 'b-diger';
-}
+const h2r=(h,a=1)=>{const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);return`rgba(${r},${g},${b},${a})`;};
+const fmt=n=>new Intl.NumberFormat('tr-TR').format(Math.round(n));
+const baseScales=()=>({
+  x:{grid:{color:'#2e3348'},ticks:{color:'#8892a4',maxTicksLimit:14,maxRotation:45}},
+  y:{grid:{color:'#2e3348'},ticks:{color:'#8892a4'}}
+});
+const baseLegend=()=>({labels:{color:'#e2e8f0',font:{size:11}}});
+const badgeCls=s=>/Arıza|Robot/.test(s)?'ba':/Kalite/.test(s)?'bk':/Parça|Sipariş|Besleme/.test(s)?'bp':/Set|Kesici/.test(s)?'bs':/Metod|Arge/.test(s)?'bm':/Planlı/.test(s)?'bl':'bd';
 
 // ── tabs ──────────────────────────────────────────────────────────────────
-function showTab(id, el) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('screen-' + id).classList.add('active');
+function T(id,el){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
   el.classList.add('active');
 }
 
 // ── E1: KPI ───────────────────────────────────────────────────────────────
-document.getElementById('meta-date').textContent = 'Son güncelleme: ' + DATA.meta.guncelleme;
+document.getElementById('upd-date').textContent='Son güncelleme: '+D.meta.guncelleme;
 
-const grid = document.getElementById('kpi-grid');
-DATA.meta.hatlar.forEach(hat => {
-  const k = DATA.kpi[hat];
-  const c = COLORS[hat];
-  const trpPct = k.ort_trp ? (k.ort_trp * 100) : null;
-  const trpStr = trpPct !== null ? trpPct.toFixed(1) + '%' : '—';
-  const trpColor = trpPct === null ? '#888' : trpPct >= 75 ? '#4ade80' : trpPct >= 55 ? '#facc15' : '#f87171';
-  grid.innerHTML += `
-    <div class="kpi-card" style="border-top:3px solid ${c}">
-      <div class="kpi-hat" style="color:${c}">${hat}</div>
-      <div class="kpi-row">
-        <div class="kpi-label">Toplam Üretim</div>
-        <div class="kpi-val">${fmt(k.toplam_uretim)}</div>
-        <div class="kpi-sub">Haziran: ${fmt(k.son_ay_uretim)} adet</div>
-      </div>
-      <div class="kpi-row" style="margin-top:10px">
-        <div class="kpi-label">TRP (son 4 hafta ort.)</div>
-        <div class="kpi-val" style="color:${trpColor};font-size:24px">${trpStr}</div>
-        <div class="trp-bar"><div class="trp-fill" style="width:${Math.min(trpPct||0,100)}%;background:${trpColor}"></div></div>
-      </div>
-      <div class="kpi-mini">
-        <div class="kpi-mini-item">
-          <div class="kpi-label">Rework</div>
-          <div class="kpi-val" style="color:#fde047">${fmt(k.toplam_rework)}</div>
-        </div>
-        <div class="kpi-mini-item">
-          <div class="kpi-label">İskarta</div>
-          <div class="kpi-val" style="color:#f87171">${fmt(k.toplam_iskarta)}</div>
-        </div>
-      </div>
-    </div>`;
+const g=document.getElementById('kpi-grid');
+D.meta.hatlar.forEach(hat=>{
+  const k=D.kpi[hat],c=HC[hat];
+  const tp=k.ort_trp?(k.ort_trp*100):null;
+  const ts=tp!==null?tp.toFixed(1)+'%':'—';
+  const tc=tp===null?'#888':tp>=75?'#4ade80':tp>=55?'#facc15':'#f87171';
+  g.innerHTML+=`<div class="kcard" style="border-top:3px solid ${c}">
+    <div class="khat" style="color:${c}">${hat}</div>
+    <div class="krow"><div class="klabel">Toplam Üretim</div><div class="kval">${fmt(k.toplam)}</div><div class="ksub">Haziran: ${fmt(k.son_ay)}</div></div>
+    <div class="krow" style="margin-top:9px"><div class="klabel">TRP (son 4 hafta)</div><div class="kval" style="color:${tc};font-size:23px">${ts}</div>
+      <div class="trpbar"><div class="trpfill" style="width:${Math.min(tp||0,100)}%;background:${tc}"></div></div></div>
+    <div class="kmini">
+      <div><div class="klabel">Rework</div><div class="kval" style="color:#fde047">${fmt(k.rework)}</div></div>
+      <div><div class="klabel">İskarta</div><div class="kval" style="color:#f87171">${fmt(k.iskarta)}</div></div>
+    </div></div>`;
 });
 
-// ── Monthly bar charts ─────────────────────────────────────────────────────
-function monthlyChart(canvasId, hats) {
-  new Chart(document.getElementById(canvasId), {
-    type: 'bar',
-    data: {
-      labels: DATA.aylik_etiketler,
-      datasets: hats.map(h => ({
-        label: h, data: DATA.aylik_uretim[h],
-        backgroundColor: hex2rgba(COLORS[h], .75),
-        borderColor: COLORS[h], borderWidth: 1, borderRadius: 4,
-      }))
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: '#e2e8f0', font: { size: 11 } } } },
-      scales: {
-        x: { grid: { color: '#2e3348' }, ticks: { color: '#8892a4' } },
-        y: { grid: { color: '#2e3348' }, ticks: { color: '#8892a4', callback: v => fmt(v) } }
-      }
-    }
+// SMF cards
+const sm=document.getElementById('smf-cards');
+const sk=D.smf_kpi;
+sm.innerHTML=`
+  <div class="smfcard"><div class="klabel">JX22 Toplam</div><div class="kval" style="font-size:22px">${fmt(sk.jx22_toplam)}</div></div>
+  <div class="smfcard"><div class="klabel">EB2 Toplam</div><div class="kval" style="font-size:22px">${fmt(sk.eb2_toplam)}</div></div>
+  <div class="smfcard"><div class="klabel">Genel Toplam</div><div class="kval" style="font-size:22px;color:#4ade80">${fmt(sk.toplam)}</div></div>
+  <div class="smfcard"><div class="klabel">NOK Adet</div><div class="kval" style="font-size:22px;color:#f87171">${fmt(sk.nok)}</div></div>
+  <div class="smfcard"><div class="klabel">Aktif Gün</div><div class="kval" style="font-size:22px">${sk.aktif_gun}</div><div class="ksub">Ara.2025–Şub.2026</div></div>`;
+
+// Monthly bars
+function mBar(id,hats){
+  new Chart(document.getElementById(id),{type:'bar',
+    data:{labels:D.aylik_etiket,datasets:hats.map(h=>({label:h,data:D.aylik_uretim[h],backgroundColor:h2r(HC[h],.75),borderColor:HC[h],borderWidth:1,borderRadius:4}))},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:baseLegend()},scales:{x:baseScales().x,y:{...baseScales().y,ticks:{color:'#8892a4',callback:v=>fmt(v)}}}}
   });
 }
-monthlyChart('ch-monthly-dmf', ['DMF1','DMF2','DMF3','DMF4']);
-monthlyChart('ch-monthly-pfw', ['PFW1','PFW2','PFW3','PFW4','ITL']);
+mBar('ch-m-dmf',['DMF1','DMF2','DMF3','DMF4']);
+mBar('ch-m-pfw',['PFW1','PFW2','PFW3','PFW4','ITL']);
+
+// SMF chart
+new Chart(document.getElementById('ch-smf'),{type:'bar',
+  data:{labels:D.smf_dates,datasets:[
+    {label:'JX22',data:D.smf_jx22,backgroundColor:h2r('#FF9800',.8),borderRadius:3,stack:'s'},
+    {label:'EB2', data:D.smf_eb2, backgroundColor:h2r('#2196F3',.8),borderRadius:3,stack:'s'},
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:baseLegend()},
+    scales:{x:{...baseScales().x,stacked:true},y:{...baseScales().y,stacked:true,ticks:{color:'#8892a4',callback:v=>fmt(v)}}}}
+});
 
 // ── E2: Trend ──────────────────────────────────────────────────────────────
-let activeHats = new Set(['DMF1','DMF2','DMF3','DMF4']);
-let chProd, chTrp;
-
-const btnDiv = document.getElementById('hat-filter-btns');
-DATA.meta.hatlar.forEach(h => {
-  const b = document.createElement('button');
-  b.className = 'hat-btn' + (activeHats.has(h) ? ' on' : '');
-  b.style.backgroundColor = activeHats.has(h) ? COLORS[h] : '';
-  b.textContent = h;
-  b.onclick = () => {
-    if (activeHats.has(h)) { activeHats.delete(h); b.classList.remove('on'); b.style.backgroundColor=''; }
-    else { activeHats.add(h); b.classList.add('on'); b.style.backgroundColor=COLORS[h]; }
-    updateTrend();
-  };
-  btnDiv.appendChild(b);
+let actH=new Set(['DMF1','DMF2','DMF3','DMF4']);
+let chTP,chTT;
+const hfDiv=document.getElementById('hf-btns');
+D.meta.hatlar.forEach(h=>{
+  const b=document.createElement('button');
+  b.className='hbtn'+(actH.has(h)?' on':'');
+  if(actH.has(h))b.style.backgroundColor=HC[h];
+  b.textContent=h;
+  b.onclick=()=>{actH.has(h)?(actH.delete(h),b.classList.remove('on'),b.style.backgroundColor=''):(actH.add(h),b.classList.add('on'),b.style.backgroundColor=HC[h]);updTrend();};
+  hfDiv.appendChild(b);
 });
+const tDS=ser=>[...actH].map(h=>({label:h,data:ser[h]||[],borderColor:HC[h],backgroundColor:h2r(HC[h],.08),borderWidth:2.5,pointRadius:3,tension:.3,fill:false}));
+const tOpts=(yFn)=>({responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+  plugins:{legend:baseLegend(),tooltip:{backgroundColor:'#1a1d27',borderColor:'#2e3348',borderWidth:1}},
+  scales:{x:baseScales().x,y:{...baseScales().y,ticks:{color:'#8892a4',callback:yFn}}}});
+chTP=new Chart(document.getElementById('ch-tw-prod'),{type:'line',data:{labels:D.haftalik_etiket,datasets:tDS(D.haftalik_uretim)},options:tOpts(v=>fmt(v))});
+chTT=new Chart(document.getElementById('ch-tw-trp'), {type:'line',data:{labels:D.haftalik_etiket,datasets:tDS(D.haftalik_trp)}, options:tOpts(v=>v+'%')});
+function updTrend(){chTP.data.datasets=tDS(D.haftalik_uretim);chTP.update();chTT.data.datasets=tDS(D.haftalik_trp);chTT.update();}
 
-function trendDS(series) {
-  return [...activeHats].map(h => ({
-    label: h, data: series[h] || [],
-    borderColor: COLORS[h], backgroundColor: hex2rgba(COLORS[h], .08),
-    borderWidth: 2.5, pointRadius: 3, tension: 0.3, fill: false,
-  }));
+// ── E3: Vardiya ─────────────────────────────────────────────────────────────
+const vrdSel=document.getElementById('vrd-hat-sel');
+D.meta.hatlar.forEach(h=>{const o=document.createElement('option');o.value=h;o.textContent=h;vrdSel.appendChild(o);});
+let chVA,chVP,chVT;
+function renderVardiya(){
+  const hat=vrdSel.value;
+  const vc=D.vardiya_chart[hat];
+  const vColors={A:'#4ade80',B:'#60a5fa',C:'#f472b6'};
+
+  if(chVA)chVA.destroy();
+  if(chVP)chVP.destroy();
+  if(chVT)chVT.destroy();
+
+  chVA=new Chart(document.getElementById('ch-vrd-aylik'),{type:'bar',
+    data:{labels:D.aylik_etiket,datasets:['A','B','C'].map(v=>({label:'Vardiya '+v,data:vc[v],backgroundColor:h2r(vColors[v],.75),borderColor:vColors[v],borderWidth:1,borderRadius:4}))},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:baseLegend()},
+      scales:{x:baseScales().x,y:{...baseScales().y,ticks:{color:'#8892a4',callback:v=>fmt(v)}}}}
+  });
+
+  // Pie — total per vardiya across all data
+  const allTots={A:0,B:0,C:0};
+  Object.values(D.vardiya_chart[hat]).forEach((arr,i)=>arr.forEach(v=>allTots[['A','B','C'][i]]+=v));
+  chVP=new Chart(document.getElementById('ch-vrd-pie'),{type:'doughnut',
+    data:{labels:['Vardiya A','Vardiya B','Vardiya C'],
+      datasets:[{data:[allTots.A,allTots.B,allTots.C],backgroundColor:[h2r('#4ade80',.8),h2r('#60a5fa',.8),h2r('#f472b6',.8)],borderColor:['#4ade80','#60a5fa','#f472b6'],borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:baseLegend(),tooltip:{callbacks:{label:ctx=>ctx.label+': '+fmt(ctx.raw)+' adet'}}}}
+  });
+
+  // TRP per vardiya per week
+  // Compute per-vardiya TRP from trp_shifts for selected hat — approximated via production
+  // Show A/B/C average production ratio as TRP proxy (actual trp by vardiya not in data_json)
+  // Instead, show weekly A vs B vs C average (vc normalized to max)
+  const wkVA=[],wkVB=[],wkVC=[];
+  D.haftalik_etiket.forEach(wk=>{
+    // proxy: monthly idx
+    const idx=D.aylik_etiket.indexOf(wk.slice(0,7));
+    wkVA.push(idx>=0?vc.A[idx]:0);
+    wkVB.push(idx>=0?vc.B[idx]:0);
+    wkVC.push(idx>=0?vc.C[idx]:0);
+  });
+  chVT=new Chart(document.getElementById('ch-vrd-trp'),{type:'line',
+    data:{labels:D.haftalik_etiket,datasets:[
+      {label:'Vardiya A',data:D.haftalik_etiket.map((_,i)=>0),hidden:true},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},
+      title:{display:true,text:'Aylık ortalama üretim (adet/vardiya) — hat: '+hat,color:'#8892a4',font:{size:12}}},
+      scales:{x:baseScales().x,y:{...baseScales().y,ticks:{color:'#8892a4',callback:v=>fmt(v)}}}}
+  });
+  // Replace with grouped monthly bar showing A/B/C per month (more meaningful)
+  chVT.destroy();
+  chVT=new Chart(document.getElementById('ch-vrd-trp'),{type:'bar',
+    data:{labels:D.aylik_etiket,datasets:[
+      {label:'Vardiya A',data:vc.A,backgroundColor:h2r('#4ade80',.75),borderColor:'#4ade80',borderWidth:1,borderRadius:4},
+      {label:'Vardiya B',data:vc.B,backgroundColor:h2r('#60a5fa',.75),borderColor:'#60a5fa',borderWidth:1,borderRadius:4},
+      {label:'Vardiya C',data:vc.C,backgroundColor:h2r('#f472b6',.75),borderColor:'#f472b6',borderWidth:1,borderRadius:4},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:baseLegend()},
+      scales:{x:baseScales().x,y:{...baseScales().y,ticks:{color:'#8892a4',callback:v=>fmt(v)}}}}
+  });
 }
+renderVardiya();
 
-const trendOpts = (yFmt) => ({
-  responsive: true, maintainAspectRatio: false,
-  interaction: { mode: 'index', intersect: false },
-  plugins: {
-    legend: { labels: { color: '#e2e8f0', font: { size: 11 } } },
-    tooltip: { backgroundColor: '#1a1d27', borderColor: '#2e3348', borderWidth: 1, titleColor: '#e2e8f0', bodyColor: '#e2e8f0' }
-  },
-  scales: {
-    x: { grid: { color: '#2e3348' }, ticks: { color: '#8892a4', maxTicksLimit: 12, maxRotation: 45 } },
-    y: { grid: { color: '#2e3348' }, ticks: { color: '#8892a4', callback: yFmt } }
-  }
-});
-
-chProd = new Chart(document.getElementById('ch-trend-prod'), {
-  type: 'line',
-  data: { labels: DATA.haftalik_etiketler, datasets: trendDS(DATA.haftalik_uretim) },
-  options: trendOpts(v => fmt(v))
-});
-chTrp = new Chart(document.getElementById('ch-trend-trp'), {
-  type: 'line',
-  data: { labels: DATA.haftalik_etiketler, datasets: trendDS(DATA.haftalik_trp) },
-  options: { ...trendOpts(v => v + '%'), scales: { x: trendOpts().scales.x, y: { ...trendOpts().scales.y, min: 0, max: 100, ticks: { color: '#8892a4', callback: v => v+'%' } } } }
-});
-
-function updateTrend() {
-  chProd.data.datasets = trendDS(DATA.haftalik_uretim); chProd.update();
-  chTrp.data.datasets  = trendDS(DATA.haftalik_trp);   chTrp.update();
+// ── E4: Referans ─────────────────────────────────────────────────────────────
+const refSel=document.getElementById('ref-hat-sel');
+D.meta.hatlar.forEach(h=>{const o=document.createElement('option');o.value=h;o.textContent=h;refSel.appendChild(o);});
+let chRB,chRP;
+const refColors=['#2196F3','#4CAF50','#FF9800','#9C27B0','#F44336','#00BCD4','#8BC34A','#FF5722'];
+function renderRef(){
+  const hat=refSel.value;
+  const r=D.ref_top[hat];
+  if(chRB)chRB.destroy();
+  if(chRP)chRP.destroy();
+  chRB=new Chart(document.getElementById('ch-ref-bar'),{type:'bar',
+    data:{labels:r.labels,datasets:[{label:'Üretim (adet)',data:r.data,backgroundColor:refColors.map(c=>h2r(c,.8)),borderColor:refColors,borderWidth:1,borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{...baseScales().x,ticks:{color:'#8892a4',callback:v=>fmt(v)}},y:{grid:{color:'transparent'},ticks:{color:'#e2e8f0'}}}}
+  });
+  chRP=new Chart(document.getElementById('ch-ref-pie'),{type:'doughnut',
+    data:{labels:r.labels,datasets:[{data:r.data,backgroundColor:refColors.map(c=>h2r(c,.8)),borderColor:refColors,borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:baseLegend(),tooltip:{callbacks:{label:ctx=>ctx.label+': '+fmt(ctx.raw)}}}}
+  });
 }
+renderRef();
 
-// ── E3: Pareto ─────────────────────────────────────────────────────────────
-const paretoColors = DATA.durus_pareto_etiket.map((_,i) => `hsl(${i*32%360},60%,55%)`);
-
-new Chart(document.getElementById('ch-pareto-cat'), {
-  type: 'bar',
-  data: {
-    labels: DATA.durus_pareto_etiket,
-    datasets: [{ label: 'Duruş (dk)', data: DATA.durus_pareto_deger, backgroundColor: paretoColors, borderRadius: 4 }]
-  },
-  options: {
-    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: {
-      x: { grid: { color: '#2e3348' }, ticks: { color: '#8892a4', callback: v => fmt(v)+' dk' } },
-      y: { grid: { color: 'transparent' }, ticks: { color: '#e2e8f0' } }
-    }
-  }
+// ── E5: Duruş ─────────────────────────────────────────────────────────────
+const pColors=D.pareto_cat_etiket.map((_,i)=>`hsl(${i*32%360},60%,55%)`);
+new Chart(document.getElementById('ch-pc'),{type:'bar',
+  data:{labels:D.pareto_cat_etiket,datasets:[{label:'dk',data:D.pareto_cat_deger,backgroundColor:pColors,borderRadius:4}]},
+  options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+    scales:{x:{...baseScales().x,ticks:{color:'#8892a4',callback:v=>fmt(v)+' dk'}},y:{grid:{color:'transparent'},ticks:{color:'#e2e8f0'}}}}
+});
+new Chart(document.getElementById('ch-ph'),{type:'bar',
+  data:{labels:D.pareto_hat_etiket,datasets:[{label:'dk',data:D.pareto_hat_deger,backgroundColor:D.pareto_hat_etiket.map(h=>h2r(HC[h]||'#888',.8)),borderColor:D.pareto_hat_etiket.map(h=>HC[h]||'#888'),borderWidth:1,borderRadius:4}]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+    scales:{x:baseScales().x,y:{...baseScales().y,ticks:{color:'#8892a4',callback:v=>fmt(v)+' dk'}}}}
+});
+new Chart(document.getElementById('ch-durus-ay'),{type:'bar',
+  data:{labels:D.durus_aylar,datasets:D.pareto_cat_etiket.map((s,i)=>({label:s,stack:'s',data:D.durus_aylar.map(ay=>D.durus_aylik[ay]?.[s]||0),backgroundColor:`hsl(${i*32%360},60%,50%)`}))},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:baseLegend()},
+    scales:{x:{...baseScales().x,stacked:true},y:{...baseScales().y,stacked:true,ticks:{color:'#8892a4',callback:v=>fmt(v)}}}}
 });
 
-new Chart(document.getElementById('ch-pareto-hat'), {
-  type: 'bar',
-  data: {
-    labels: DATA.durus_hat_etiket,
-    datasets: [{
-      label: 'Toplam Duruş (dk)', data: DATA.durus_hat_deger, borderRadius: 4,
-      backgroundColor: DATA.durus_hat_etiket.map(h => hex2rgba(COLORS[h]||'#888', .8)),
-      borderColor: DATA.durus_hat_etiket.map(h => COLORS[h]||'#888'), borderWidth: 1,
-    }]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: {
-      x: { grid: { color: '#2e3348' }, ticks: { color: '#8892a4' } },
-      y: { grid: { color: '#2e3348' }, ticks: { color: '#8892a4', callback: v => fmt(v)+' dk' } }
-    }
-  }
-});
-
-// Monthly stacked
-const allSebepler = DATA.durus_pareto_etiket;
-new Chart(document.getElementById('ch-durus-aylik'), {
-  type: 'bar',
-  data: {
-    labels: DATA.durus_aylar,
-    datasets: allSebepler.map((s, i) => ({
-      label: s, stack: 'stk',
-      data: DATA.durus_aylar.map(ay => DATA.durus_aylik[ay]?.[s] || 0),
-      backgroundColor: `hsl(${i*32%360},60%,50%)`,
-    }))
-  },
-  options: {
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { labels: { color: '#e2e8f0', font: { size: 10 }, boxWidth: 12 } } },
-    scales: {
-      x: { stacked: true, grid: { color: '#2e3348' }, ticks: { color: '#8892a4' } },
-      y: { stacked: true, grid: { color: '#2e3348' }, ticks: { color: '#8892a4', callback: v => fmt(v) } }
-    }
-  }
-});
-
-// ── E4: Table ──────────────────────────────────────────────────────────────
-const hatSel  = document.getElementById('f-hat');
-const sebepSel= document.getElementById('f-sebep');
-[...new Set(DATA.son_duruslar.map(r => r.hat))].sort()
-  .forEach(h => { const o=document.createElement('option'); o.value=h; o.textContent=h; hatSel.appendChild(o); });
-[...new Set(DATA.son_duruslar.map(r => r.sebep))].sort()
-  .forEach(s => { const o=document.createElement('option'); o.value=s; o.textContent=s; sebepSel.appendChild(o); });
-
-function filterTable() {
-  const hat  = document.getElementById('f-hat').value;
-  const sebep= document.getElementById('f-sebep').value;
-  const vrd  = document.getElementById('f-vardiya').value;
-  const txt  = document.getElementById('f-text').value.toLowerCase();
-  const rows = DATA.son_duruslar.filter(r =>
-    (!hat   || r.hat === hat) &&
-    (!sebep || r.sebep === sebep) &&
-    (!vrd   || r.vardiya === vrd) &&
-    (!txt   || r.aciklama.toLowerCase().includes(txt))
-  );
-  document.getElementById('row-count').textContent = rows.length + ' kayıt';
-  const tbody = document.getElementById('durus-tbody');
-  if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px">Kayıt bulunamadı</td></tr>';
-    return;
-  }
-  tbody.innerHTML = rows.slice(0,200).map(r => {
-    const hc = COLORS[r.hat] || '#888';
-    const sc = r.sure >= 120 ? '#f87171' : r.sure >= 60 ? '#facc15' : '#e2e8f0';
-    return `<tr>
-      <td>${r.tarih}</td>
-      <td style="font-weight:600">${r.vardiya}</td>
-      <td style="color:${hc};font-weight:600">${r.hat}</td>
-      <td><span class="badge ${badgeCls(r.sebep)}">${r.sebep}</span></td>
-      <td style="color:${sc};font-weight:700">${r.sure}</td>
-      <td style="color:#cbd5e1;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.aciklama}</td>
-      <td style="color:#8892a4">${r.op}</td>
-    </tr>`;
+// ── E6: Detay ─────────────────────────────────────────────────────────────
+const hSel=document.getElementById('f-hat'),sSel=document.getElementById('f-sebep');
+[...new Set(D.son_duruslar.map(r=>r.hat))].sort().forEach(h=>{const o=document.createElement('option');o.value=h;o.textContent=h;hSel.appendChild(o);});
+[...new Set(D.son_duruslar.map(r=>r.sebep))].sort().forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;sSel.appendChild(o);});
+function flt(){
+  const h=hSel.value,s=sSel.value,v=document.getElementById('f-vardiya').value,t=document.getElementById('f-text').value.toLowerCase();
+  const rows=D.son_duruslar.filter(r=>(!h||r.hat===h)&&(!s||r.sebep===s)&&(!v||r.vardiya===v)&&(!t||r.aciklama.toLowerCase().includes(t)));
+  document.getElementById('fcount').textContent=rows.length+' kayıt';
+  const tb=document.getElementById('dur-tbody');
+  if(!rows.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--mut);padding:28px">Kayıt bulunamadı</td></tr>';return;}
+  tb.innerHTML=rows.slice(0,200).map(r=>{
+    const hc=HC[r.hat]||'#888',sc=r.sure>=120?'#f87171':r.sure>=60?'#facc15':'#e2e8f0';
+    return`<tr><td>${r.tarih}</td><td style="font-weight:600">${r.vardiya}</td><td style="color:${hc};font-weight:600">${r.hat}</td><td><span class="badge ${badgeCls(r.sebep)}">${r.sebep}</span></td><td style="color:${sc};font-weight:700">${r.sure}</td><td style="color:#cbd5e1;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.aciklama}</td><td style="color:#8892a4">${r.op}</td></tr>`;
   }).join('');
 }
-filterTable();
+flt();
 </script>
 </body>
 </html>
