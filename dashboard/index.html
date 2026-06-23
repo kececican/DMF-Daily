@@ -1,0 +1,2478 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DMF Daily – Üretim Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117; --surface: #1a1d27; --surface2: #242736;
+      --border: #2e3348; --text: #e2e8f0; --muted: #8892a4; --accent: #3b82f6;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; }
+
+    .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+    .header h1 { font-size: 18px; font-weight: 600; color: #fff; }
+    .header .meta { font-size: 12px; color: var(--muted); }
+
+    .tabs { display: flex; gap: 2px; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; }
+    .tab { padding: 12px 20px; cursor: pointer; border-bottom: 2px solid transparent; color: var(--muted); font-weight: 500; transition: all .15s; white-space: nowrap; user-select: none; }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .screen { display: none; padding: 24px; max-width: 1600px; margin: 0 auto; }
+    .screen.active { display: block; }
+
+    /* E1 KPI */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; margin-bottom: 24px; }
+    .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+    .kpi-hat { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 12px; }
+    .kpi-row { margin-bottom: 8px; }
+    .kpi-label { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+    .kpi-val { font-size: 21px; font-weight: 700; color: #fff; line-height: 1.1; }
+    .kpi-sub { font-size: 11px; color: var(--muted); }
+    .trp-bar { height: 6px; background: var(--border); border-radius: 3px; margin-top: 6px; overflow: hidden; }
+    .trp-fill { height: 100%; border-radius: 3px; }
+    .kpi-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
+    .kpi-mini-item .kpi-label { font-size: 10px; }
+    .kpi-mini-item .kpi-val { font-size: 15px; }
+
+    /* Charts */
+    .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    .chart-row.full { grid-template-columns: 1fr; }
+    .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+    .chart-title { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 16px; }
+    .chart-wrap { position: relative; height: 280px; }
+
+    /* Hat filter buttons */
+    .hat-filter { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; align-items: center; }
+    .hat-filter label { font-size: 12px; color: var(--muted); }
+    .hat-btn { padding: 5px 13px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-size: 12px; font-weight: 600; transition: all .15s; }
+    .hat-btn.on { color: #fff; border-color: transparent; }
+
+    /* E3 */
+    .pareto-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+    /* E4 Table */
+    .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: auto; }
+    .filter-bar { display: flex; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; align-items: center; }
+    .filter-bar select, .filter-bar input {
+      background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+      padding: 6px 10px; border-radius: 6px; font-size: 13px;
+    }
+    table { width: 100%; border-collapse: collapse; min-width: 700px; }
+    th { background: var(--surface2); padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    td { padding: 9px 14px; border-bottom: 1px solid var(--border); font-size: 13px; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--surface2); }
+    .badge { display: inline-block; padding: 2px 9px; border-radius: 12px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+    .b-ariza   { background: #7f1d1d33; color: #fca5a5; border: 1px solid #7f1d1d; }
+    .b-kalite  { background: #78350f33; color: #fcd34d; border: 1px solid #78350f; }
+    .b-parca   { background: #1e3a5f33; color: #93c5fd; border: 1px solid #1e3a5f; }
+    .b-setup   { background: #1a3a1a33; color: #86efac; border: 1px solid #1a3a1a; }
+    .b-metod   { background: #2e1a4a33; color: #c4b5fd; border: 1px solid #2e1a4a; }
+    .b-plan    { background: #1a2e2e33; color: #6ee7b7; border: 1px solid #1a2e2e; }
+    .b-diger   { background: #2a2a2a33; color: #d1d5db; border: 1px solid #2a2a2a; }
+
+    @media (max-width: 900px) {
+      .chart-row, .pareto-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>⚙ DMF Daily — Üretim Takip Dashboard</h1>
+  <span class="meta" id="meta-date"></span>
+</div>
+
+<div class="tabs">
+  <div class="tab active"  onclick="showTab('e1',this)">📊 KPI Özet</div>
+  <div class="tab"         onclick="showTab('e2',this)">📈 Üretim Trendi</div>
+  <div class="tab"         onclick="showTab('e3',this)">⏱ Duruş Analizi</div>
+  <div class="tab"         onclick="showTab('e4',this)">📋 Duruş Detay</div>
+</div>
+
+<!-- E1 -->
+<div id="screen-e1" class="screen active">
+  <div class="kpi-grid" id="kpi-grid"></div>
+  <div class="chart-row">
+    <div class="chart-card">
+      <div class="chart-title">Aylık Üretim — DMF Hatları</div>
+      <div class="chart-wrap"><canvas id="ch-monthly-dmf"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Aylık Üretim — PFW & ITL Hatları</div>
+      <div class="chart-wrap"><canvas id="ch-monthly-pfw"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- E2 -->
+<div id="screen-e2" class="screen">
+  <div class="hat-filter">
+    <span style="font-size:12px;color:var(--muted)">Hat seç:</span>
+    <div id="hat-filter-btns"></div>
+  </div>
+  <div class="chart-row full">
+    <div class="chart-card">
+      <div class="chart-title">Haftalık Üretim Trendi (Adet)</div>
+      <div class="chart-wrap" style="height:320px"><canvas id="ch-trend-prod"></canvas></div>
+    </div>
+  </div>
+  <div class="chart-row full">
+    <div class="chart-card">
+      <div class="chart-title">Haftalık TRP (%) — Vardiya Başına Ortalama</div>
+      <div class="chart-wrap" style="height:300px"><canvas id="ch-trend-trp"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- E3 -->
+<div id="screen-e3" class="screen">
+  <div class="pareto-grid">
+    <div class="chart-card">
+      <div class="chart-title">Duruş Sebebi Pareto (dk)</div>
+      <div class="chart-wrap" style="height:360px"><canvas id="ch-pareto-cat"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Hat Bazında Toplam Duruş (dk)</div>
+      <div class="chart-wrap" style="height:360px"><canvas id="ch-pareto-hat"></canvas></div>
+    </div>
+  </div>
+  <div class="chart-row full">
+    <div class="chart-card">
+      <div class="chart-title">Aylık Duruş Dağılımı — Sebep Bazında (dk)</div>
+      <div class="chart-wrap" style="height:300px"><canvas id="ch-durus-aylik"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- E4 -->
+<div id="screen-e4" class="screen">
+  <div class="table-wrap">
+    <div class="filter-bar">
+      <select id="f-hat"     onchange="filterTable()"><option value="">Tüm Hatlar</option></select>
+      <select id="f-sebep"   onchange="filterTable()"><option value="">Tüm Sebepler</option></select>
+      <select id="f-vardiya" onchange="filterTable()">
+        <option value="">Tüm Vardiyalar</option>
+        <option>A</option><option>B</option><option>C</option>
+      </select>
+      <input type="text" id="f-text" placeholder="Açıklama ara…" oninput="filterTable()" style="flex:1;min-width:180px">
+      <span id="row-count" style="font-size:12px;color:var(--muted);white-space:nowrap"></span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Tarih</th><th>Vrd.</th><th>Hat</th>
+          <th>Duruş Sebebi</th><th>Süre (dk)</th><th>Açıklama</th><th>OP</th>
+        </tr>
+      </thead>
+      <tbody id="durus-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const DATA = {
+  "meta": {
+    "guncelleme": "23.06.2026 07:29",
+    "hatlar": [
+      "DMF1",
+      "DMF2",
+      "DMF3",
+      "DMF4",
+      "PFW1",
+      "PFW2",
+      "PFW3",
+      "PFW4",
+      "ITL"
+    ]
+  },
+  "kpi": {
+    "DMF1": {
+      "toplam_uretim": 162334,
+      "son_ay_uretim": 20986,
+      "toplam_durus_dk": 80082.0,
+      "toplam_rework": 3219,
+      "toplam_iskarta": 217,
+      "ort_trp": 0.538
+    },
+    "DMF2": {
+      "toplam_uretim": 162778,
+      "son_ay_uretim": 21901,
+      "toplam_durus_dk": 82522.0,
+      "toplam_rework": 2250,
+      "toplam_iskarta": 247,
+      "ort_trp": 0.674
+    },
+    "DMF3": {
+      "toplam_uretim": 116191,
+      "son_ay_uretim": 20098,
+      "toplam_durus_dk": 97562.0,
+      "toplam_rework": 4694,
+      "toplam_iskarta": 166,
+      "ort_trp": 0.552
+    },
+    "DMF4": {
+      "toplam_uretim": 177112,
+      "son_ay_uretim": 24507,
+      "toplam_durus_dk": 61639.0,
+      "toplam_rework": 2830,
+      "toplam_iskarta": 1315,
+      "ort_trp": 0.701
+    },
+    "PFW1": {
+      "toplam_uretim": 147760,
+      "son_ay_uretim": 20629,
+      "toplam_durus_dk": 45372.0,
+      "toplam_rework": 0,
+      "toplam_iskarta": 0,
+      "ort_trp": 0.573
+    },
+    "PFW2": {
+      "toplam_uretim": 156337,
+      "son_ay_uretim": 22189,
+      "toplam_durus_dk": 63164.0,
+      "toplam_rework": 0,
+      "toplam_iskarta": 0,
+      "ort_trp": 0.649
+    },
+    "PFW3": {
+      "toplam_uretim": 126446,
+      "son_ay_uretim": 19623,
+      "toplam_durus_dk": 57021.0,
+      "toplam_rework": 0,
+      "toplam_iskarta": 0,
+      "ort_trp": 0.618
+    },
+    "PFW4": {
+      "toplam_uretim": 180366,
+      "son_ay_uretim": 24870,
+      "toplam_durus_dk": 53712.0,
+      "toplam_rework": 0,
+      "toplam_iskarta": 0,
+      "ort_trp": 0.695
+    },
+    "ITL": {
+      "toplam_uretim": 154320,
+      "son_ay_uretim": 19333,
+      "toplam_durus_dk": 38437.0,
+      "toplam_rework": 0,
+      "toplam_iskarta": 0,
+      "ort_trp": 0.817
+    }
+  },
+  "haftalik_etiketler": [
+    "2026-H07",
+    "2026-H08",
+    "2026-H09",
+    "2026-H10",
+    "2026-H11",
+    "2026-H12",
+    "2026-H13",
+    "2026-H14",
+    "2026-H15",
+    "2026-H16",
+    "2026-H17",
+    "2026-H18",
+    "2026-H19",
+    "2026-H20",
+    "2026-H21",
+    "2026-H22",
+    "2026-H23",
+    "2026-H24",
+    "2026-H25",
+    "2026-H26"
+  ],
+  "haftalik_uretim": {
+    "DMF1": [
+      7813,
+      7681,
+      7665,
+      7296,
+      8030,
+      6522,
+      4884,
+      6297,
+      6560,
+      7349,
+      6470,
+      8049,
+      7448,
+      7032,
+      6397,
+      3735,
+      6378,
+      7368,
+      6875,
+      365
+    ],
+    "DMF2": [
+      6283,
+      5667,
+      5994,
+      6463,
+      6813,
+      4780,
+      7219,
+      6639,
+      5852,
+      8390,
+      9258,
+      8670,
+      8934,
+      8432,
+      8081,
+      5488,
+      8216,
+      6121,
+      7163,
+      401
+    ],
+    "DMF3": [
+      3743,
+      4370,
+      4019,
+      4302,
+      4305,
+      2277,
+      3133,
+      3026,
+      3988,
+      5956,
+      7344,
+      6808,
+      5394,
+      6331,
+      6170,
+      2816,
+      6819,
+      6612,
+      6391,
+      276
+    ],
+    "DMF4": [
+      7196,
+      6628,
+      6811,
+      7531,
+      6624,
+      4215,
+      7762,
+      7403,
+      6995,
+      8157,
+      9290,
+      8429,
+      8391,
+      7786,
+      7527,
+      5417,
+      7749,
+      8220,
+      7949,
+      589
+    ],
+    "PFW1": [
+      4302,
+      7455,
+      5323,
+      7000,
+      7032,
+      4974,
+      6429,
+      6740,
+      5127,
+      8153,
+      6397,
+      7067,
+      6889,
+      6652,
+      5881,
+      4323,
+      6210,
+      7247,
+      6735,
+      437
+    ],
+    "PFW2": [
+      6973,
+      5703,
+      5919,
+      6856,
+      5719,
+      5697,
+      5652,
+      5364,
+      5111,
+      6149,
+      8672,
+      8476,
+      7630,
+      8111,
+      8389,
+      5118,
+      7866,
+      6638,
+      7259,
+      426
+    ],
+    "PFW3": [
+      3062,
+      4910,
+      3580,
+      4618,
+      6820,
+      3126,
+      3718,
+      3824,
+      4632,
+      6120,
+      7331,
+      8656,
+      6375,
+      6929,
+      6258,
+      3353,
+      6817,
+      6230,
+      6576,
+      0
+    ],
+    "PFW4": [
+      7358,
+      6594,
+      7551,
+      7421,
+      7023,
+      5461,
+      6978,
+      7789,
+      7743,
+      7857,
+      8774,
+      8851,
+      8087,
+      7851,
+      8427,
+      5117,
+      8405,
+      8051,
+      7925,
+      489
+    ],
+    "ITL": [
+      4932,
+      7106,
+      7640,
+      10022,
+      8399,
+      3752,
+      9648,
+      4580,
+      7342,
+      2920,
+      6937,
+      7633,
+      6963,
+      3991,
+      5418,
+      3144,
+      6602,
+      6959,
+      5772,
+      0
+    ]
+  },
+  "haftalik_trp": {
+    "DMF1": [
+      63.6,
+      59.2,
+      54.5,
+      59.3,
+      59.9,
+      71.3,
+      56.6,
+      54.4,
+      55.6,
+      52.0,
+      55.7,
+      40.2,
+      65.3,
+      57.6,
+      54.4,
+      40.2,
+      53.1,
+      59.2,
+      48.4,
+      59.6
+    ],
+    "DMF2": [
+      60.5,
+      47.4,
+      52.8,
+      52.3,
+      54.7,
+      61.4,
+      60.5,
+      62.3,
+      47.3,
+      71.7,
+      77.2,
+      64.6,
+      73.0,
+      73.0,
+      66.4,
+      67.8,
+      72.0,
+      69.9,
+      60.5,
+      68.2
+    ],
+    "DMF3": [
+      29.5,
+      32.1,
+      33.9,
+      36.7,
+      37.9,
+      28.7,
+      30.9,
+      27.4,
+      40.1,
+      43.7,
+      65.1,
+      45.9,
+      51.2,
+      44.2,
+      54.1,
+      34.1,
+      51.3,
+      61.4,
+      55.6,
+      37.9
+    ],
+    "DMF4": [
+      63.7,
+      62.0,
+      57.7,
+      67.1,
+      55.8,
+      47.7,
+      60.7,
+      58.2,
+      56.6,
+      64.9,
+      79.1,
+      61.7,
+      58.7,
+      62.6,
+      63.7,
+      57.1,
+      67.7,
+      69.9,
+      70.4,
+      85.2
+    ],
+    "PFW1": [
+      57.4,
+      64.1,
+      54.0,
+      74.6,
+      63.0,
+      62.4,
+      59.8,
+      59.1,
+      59.9,
+      69.6,
+      49.0,
+      61.3,
+      64.9,
+      74.9,
+      70.9,
+      52.8,
+      47.0,
+      67.5,
+      56.0,
+      75.9
+    ],
+    "PFW2": [
+      65.2,
+      56.5,
+      63.1,
+      64.6,
+      60.1,
+      65.6,
+      56.6,
+      49.0,
+      45.9,
+      57.0,
+      77.1,
+      71.6,
+      64.2,
+      70.0,
+      72.3,
+      68.9,
+      64.1,
+      56.9,
+      72.3,
+      74.0
+    ],
+    "PFW3": [
+      0,
+      48.2,
+      50.6,
+      62.6,
+      52.8,
+      67.3,
+      0,
+      40.2,
+      47.8,
+      54.5,
+      57.7,
+      55.7,
+      47.8,
+      58.4,
+      57.7,
+      48.7,
+      58.7,
+      59.7,
+      66.3,
+      0
+    ],
+    "PFW4": [
+      70.4,
+      61.1,
+      63.6,
+      60.5,
+      64.1,
+      65.6,
+      61.9,
+      60.8,
+      75.7,
+      69.2,
+      73.9,
+      74.0,
+      56.7,
+      0,
+      0,
+      0,
+      0,
+      70.5,
+      67.9,
+      77.1
+    ],
+    "ITL": [
+      79.9,
+      81.3,
+      82.5,
+      97.4,
+      96.1,
+      66.3,
+      89.3,
+      63.6,
+      75.1,
+      63.1,
+      89.9,
+      87.3,
+      79.6,
+      97.0,
+      87.8,
+      87.3,
+      80.2,
+      84.6,
+      80.2,
+      0
+    ]
+  },
+  "aylik_etiketler": [
+    "1900-01",
+    "2026-01",
+    "2026-02",
+    "2026-03",
+    "2026-04",
+    "2026-05",
+    "2026-06"
+  ],
+  "aylik_uretim": {
+    "DMF1": [
+      0,
+      24537,
+      29605,
+      29364,
+      30236,
+      27606,
+      20986
+    ],
+    "DMF2": [
+      0,
+      19853,
+      24948,
+      28048,
+      33647,
+      34381,
+      21901
+    ],
+    "DMF3": [
+      0,
+      16715,
+      16864,
+      15986,
+      22946,
+      23582,
+      20098
+    ],
+    "DMF4": [
+      0,
+      27525,
+      28315,
+      29390,
+      34110,
+      33265,
+      24507
+    ],
+    "PFW1": [
+      23356,
+      1249,
+      18999,
+      27910,
+      28724,
+      26893,
+      20629
+    ],
+    "PFW2": [
+      0,
+      20465,
+      25643,
+      26814,
+      28422,
+      32804,
+      22189
+    ],
+    "PFW3": [
+      0,
+      16998,
+      16915,
+      20796,
+      25959,
+      26155,
+      19623
+    ],
+    "PFW4": [
+      0,
+      27686,
+      29412,
+      30149,
+      34530,
+      33719,
+      24870
+    ],
+    "ITL": [
+      0,
+      28216,
+      24404,
+      35261,
+      24596,
+      22510,
+      19333
+    ]
+  },
+  "durus_pareto_etiket": [
+    "Makine Arıza",
+    "Sipariş Yok",
+    "Metod-Arge",
+    "Parça Yok",
+    "Set-Up",
+    "Kalıp Arıza",
+    "Hat Besleme",
+    "Kalite Prob.",
+    "Eksik Operatör",
+    "Planlı Duruş",
+    "Robot Arıza",
+    "Performans",
+    "Eğitim"
+  ],
+  "durus_pareto_deger": [
+    16667.0,
+    10740.0,
+    6742.0,
+    5367.0,
+    2820.0,
+    1809.0,
+    1621.0,
+    1361.0,
+    1126.0,
+    362.0,
+    282.0,
+    245.0,
+    20.0
+  ],
+  "durus_hat_etiket": [
+    "ITL",
+    "DMF4",
+    "DMF2",
+    "DMF3",
+    "PFW4"
+  ],
+  "durus_hat_deger": [
+    18059.0,
+    15536.0,
+    7823.0,
+    7256.0,
+    488.0
+  ],
+  "durus_aylar": [
+    "2026-02",
+    "2026-04",
+    "2026-05",
+    "2026-06"
+  ],
+  "durus_aylik": {
+    "2026-06": {
+      "Makine Arıza": 3570.0,
+      "Robot Arıza": 224.0,
+      "Kalite Prob.": 153.0,
+      "Metod-Arge": 170.0,
+      "Set-Up": 919.0,
+      "Parça Yok": 302.0,
+      "Kalıp Arıza": 122.0,
+      "Hat Besleme": 31.0
+    },
+    "2026-05": {
+      "Makine Arıza": 3546.0,
+      "Robot Arıza": 58.0,
+      "Kalite Prob.": 187.0,
+      "Hat Besleme": 120.0,
+      "Planlı Duruş": 105.0,
+      "Parça Yok": 1949.0,
+      "Metod-Arge": 3900.0,
+      "Set-Up": 671.0,
+      "Kalıp Arıza": 1208.0,
+      "Sipariş Yok": 2880.0
+    },
+    "2026-04": {
+      "Parça Yok": 2824.0,
+      "Makine Arıza": 7271.0,
+      "Kalite Prob.": 911.0,
+      "Metod-Arge": 2672.0,
+      "Planlı Duruş": 191.0,
+      "Hat Besleme": 1470.0,
+      "Performans": 245.0,
+      "Sipariş Yok": 7860.0,
+      "Eğitim": 20.0,
+      "Eksik Operatör": 960.0,
+      "Kalıp Arıza": 470.0,
+      "Set-Up": 690.0
+    },
+    "2026-02": {
+      "Planlı Duruş": 66.0,
+      "Makine Arıza": 2280.0,
+      "Set-Up": 540.0,
+      "Parça Yok": 292.0,
+      "Kalıp Arıza": 9.0,
+      "Eksik Operatör": 166.0,
+      "Kalite Prob.": 110.0
+    }
+  },
+  "son_duruslar": [
+    {
+      "tarih": "2026-06-18",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 10.0,
+      "aciklama": "OP180 BALANS ELEMENTI KANALA TERS GELDI",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-18",
+      "vardiya": "A",
+      "sebep": "Robot Arıza",
+      "hat": "DMF4",
+      "sure": 10.0,
+      "aciklama": "FINAL ROBOT CARPISMA HATASI ",
+      "op": "270.0"
+    },
+    {
+      "tarih": "2026-06-18",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 10.0,
+      "aciklama": "OP70 Transfer Lift te Palet Hafıza Karışlığı ",
+      "op": "70.0"
+    },
+    {
+      "tarih": "2026-06-18",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 10.0,
+      "aciklama": "OP160 kep kanalda takılma ",
+      "op": "160.0"
+    },
+    {
+      "tarih": "2026-06-18",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 9.0,
+      "aciklama": "OP70 KAPAK OTURTAMAMA HATASI   3X",
+      "op": "70.0"
+    },
+    {
+      "tarih": "2026-06-18",
+      "vardiya": "A",
+      "sebep": "Kalite Prob.",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "OP150 hatalı percın ezme",
+      "op": "150.0"
+    },
+    {
+      "tarih": "2026-06-18",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 10.0,
+      "aciklama": "OP180 BALANS ELEMENTI LINEAR KANALDA İLERLEMEDİ AYARI",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-18",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 60.0,
+      "aciklama": "Op180 Dengelme Balans Elementi Kanalda Takılmıs.Lınear Yola Mudahale Edıldı",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-18",
+      "vardiya": "B",
+      "sebep": "Metod-Arge",
+      "hat": "DMF4",
+      "sure": 30.0,
+      "aciklama": "Op 160 Capsız Parca Gondermemesi için iyileştirme çalışması ",
+      "op": "160.0"
+    },
+    {
+      "tarih": "2026-06-18",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 10.0,
+      "aciklama": "Op 160 Cap Kanalda Takılmıs ",
+      "op": "160.0"
+    },
+    {
+      "tarih": "2026-06-18",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 10.0,
+      "aciklama": "Op 50 Pompa Yag Basamıyor",
+      "op": "50.0"
+    },
+    {
+      "tarih": "2026-06-18",
+      "vardiya": "B",
+      "sebep": "Set-Up",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op 200 Sekman Degişimi ",
+      "op": "200.0"
+    },
+    {
+      "tarih": "2026-06-18",
+      "vardiya": "B",
+      "sebep": "Set-Up",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op250 DataMatrıx Etıket Degişimi",
+      "op": "250.0"
+    },
+    {
+      "tarih": "2026-06-17",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 32.0,
+      "aciklama": "OP210 transfer lıft dayama arızası mekanık ayar yapıldı",
+      "op": "210.0"
+    },
+    {
+      "tarih": "2026-06-17",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 12.0,
+      "aciklama": "yaglama hava yaptı 2 nolu yag ıstasyonu arızalı dıger ıstasyon ıcın yag beklendı",
+      "op": "50.0"
+    },
+    {
+      "tarih": "2026-06-17",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "OP180 balans elemntı konum ayarı yapıldı   kafa acı ayarı yapıldı konumlama yapı",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-17",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 9.0,
+      "aciklama": "OP75 LIFT HAFIZA KARISIKLIGI",
+      "op": "75.0"
+    },
+    {
+      "tarih": "2026-06-17",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 9.0,
+      "aciklama": "op210 öncesi lift takılı kaldı",
+      "op": "210.0"
+    },
+    {
+      "tarih": "2026-06-17",
+      "vardiya": "A",
+      "sebep": "Robot Arıza",
+      "hat": "DMF4",
+      "sure": 10.0,
+      "aciklama": "op270 robot çarpışma hatasına geçti",
+      "op": "270.0"
+    },
+    {
+      "tarih": "2026-06-17",
+      "vardiya": "A",
+      "sebep": "Set-Up",
+      "hat": "DMF4",
+      "sure": 3.0,
+      "aciklama": "OP200 sekman değişimi",
+      "op": "200.0"
+    },
+    {
+      "tarih": "2026-06-17",
+      "vardiya": "B",
+      "sebep": "Robot Arıza",
+      "hat": "DMF4",
+      "sure": 10.0,
+      "aciklama": "Fınal Robot Çarpışma  Hatasına Gectı ",
+      "op": "270.0"
+    },
+    {
+      "tarih": "2026-06-17",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 10.0,
+      "aciklama": "Op 160 Cap Kanalına Yabancı Madde Sıkısması ",
+      "op": "160.0"
+    },
+    {
+      "tarih": "2026-06-17",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 45.0,
+      "aciklama": "Dengeleme Percın kanalda ilerleyemıyor",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-17",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 30.0,
+      "aciklama": "Op 130 start almıyor",
+      "op": "130.0"
+    },
+    {
+      "tarih": "2026-06-17",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 9.0,
+      "aciklama": "Op 70 Cam Sıcaklık Hatasına Gectı 3X",
+      "op": "70.0"
+    },
+    {
+      "tarih": "2026-06-17",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Sekman İtleme Pistonu Sıkıştı ",
+      "op": "200.0"
+    },
+    {
+      "tarih": "2026-06-17",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 19.0,
+      "aciklama": "Dengeleme Linear Yolunda Weldingi Aktaramıyor Müdahale Edildi ",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-17",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 9.0,
+      "aciklama": "OP160 Sarsakta Yabancı Madde Müdahale Edildi",
+      "op": "160.0"
+    },
+    {
+      "tarih": "2026-06-17",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 146.0,
+      "aciklama": "Robot  Devam Etmiyor ",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-17",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 9.0,
+      "aciklama": "Op70 Transfer Lift te Palet Hafıza Karışlığı ",
+      "op": "70.0"
+    },
+    {
+      "tarih": "2026-06-17",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 29.0,
+      "aciklama": "OP160 Kep Şarjör ve Hortuma Yabancı Madde Sıkışması ",
+      "op": "160.0"
+    },
+    {
+      "tarih": "2026-06-16",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 8.0,
+      "aciklama": "OP250 DATA MATRIX ETIKET DEGISIMI RIBON KOPMA YASANDI RIBON AYARI",
+      "op": "250.0"
+    },
+    {
+      "tarih": "2026-06-16",
+      "vardiya": "A",
+      "sebep": "Parça Yok",
+      "hat": "DMF4",
+      "sure": 11.0,
+      "aciklama": "1084217C SEALWASHER BEKLEME",
+      "op": "60.0"
+    },
+    {
+      "tarih": "2026-06-16",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 9.0,
+      "aciklama": "OP85 oncesı palet rotary palet salmıyor manuel ayarlandı",
+      "op": "85.0"
+    },
+    {
+      "tarih": "2026-06-16",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "OP70 ve 75 transfer lıft ust pozısyonda kaldı",
+      "op": "70.0"
+    },
+    {
+      "tarih": "2026-06-16",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 24.0,
+      "aciklama": "OP70 ıstasyon guvenlık hatası",
+      "op": "70.0"
+    },
+    {
+      "tarih": "2026-06-16",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 30.0,
+      "aciklama": "Op 70 Grıpper Cetvelıne Mudahale Edıldı",
+      "op": "70.0"
+    },
+    {
+      "tarih": "2026-06-16",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 9.0,
+      "aciklama": "Op 210 oncesı lıft takılı kalmış ",
+      "op": "210.0"
+    },
+    {
+      "tarih": "2026-06-16",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 277.0,
+      "aciklama": "Dengeleme Kontrol Esnasında Sase Ve Kaynak Pıstonu Asagıya Indı",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-16",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 240.0,
+      "aciklama": "Dengeleme Kontrol Esnasında Sase Ve Kaynak Pıstonu Asagıya Indı",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-16",
+      "vardiya": "C",
+      "sebep": "Metod-Arge",
+      "hat": "DMF4",
+      "sure": 25.0,
+      "aciklama": "Op:200 Sekman Çakma Grafikten Kalıyor. Metod Müdahale ediyor.",
+      "op": "200.0"
+    },
+    {
+      "tarih": "2026-06-16",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 9.0,
+      "aciklama": "Op:250 Datamatrix Vakum Problemi. 2x Müdahale edildi.",
+      "op": "250.0"
+    },
+    {
+      "tarih": "2026-06-16",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 22.0,
+      "aciklama": "Op:130 SFW Yokken Press Tabloya indi. Müdahale edildi.",
+      "op": "130.0"
+    },
+    {
+      "tarih": "2026-06-16",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 11.0,
+      "aciklama": "Op:210 Lift transfer Konumuna gelmiyor. Lift Aşağıda bekliyor.",
+      "op": "210.0"
+    },
+    {
+      "tarih": "2026-06-15",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "OP85 ROTARY PALET SALMIYOR",
+      "op": "85.0"
+    },
+    {
+      "tarih": "2026-06-15",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "OP210 ONCESI LIFT SENSOR GORMUYOR PALET BEKLETIYOR",
+      "op": "210.0"
+    },
+    {
+      "tarih": "2026-06-15",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "OP75 ROBOT GUVENLIK HATASI ",
+      "op": "75.0"
+    },
+    {
+      "tarih": "2026-06-15",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 14.0,
+      "aciklama": "OP180 BALANS ELEMENTI LINEAR KANALDA ILERLEME YAPMIYOR. lınear kanal konum ayarı",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-15",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "OP90 ALT TUL TEMIZLENDI PARCALAR AXIELDEN NOK VERIYOR",
+      "op": "90.0"
+    },
+    {
+      "tarih": "2026-06-15",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 6.0,
+      "aciklama": "OP60 KAMERA DONDU PROGRAM KAPATILIP ACILDI",
+      "op": "60.0"
+    },
+    {
+      "tarih": "2026-06-15",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 6.0,
+      "aciklama": "OP70 MERKEZLEME HATASI 3X",
+      "op": "70.0"
+    },
+    {
+      "tarih": "2026-06-15",
+      "vardiya": "B",
+      "sebep": "Robot Arıza",
+      "hat": "DMF4",
+      "sure": 9.0,
+      "aciklama": "Op270 Robot Screbe Parcayı Atıyor Paletı Transfer Etmıyor 2X",
+      "op": "270.0"
+    },
+    {
+      "tarih": "2026-06-15",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 13.0,
+      "aciklama": "Op 20 Kalıbrasyonları Yapıldı ",
+      "op": "20.0"
+    },
+    {
+      "tarih": "2026-06-15",
+      "vardiya": "B",
+      "sebep": "Robot Arıza",
+      "hat": "DMF4",
+      "sure": 19.0,
+      "aciklama": "Robota ModPos Yapıldı Red Konveyoru Sensorune Mudahale Edıldı",
+      "op": "270.0"
+    },
+    {
+      "tarih": "2026-06-15",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 6.0,
+      "aciklama": "Op 210  Palet Lıft Transferınde Palet Takılı Kaldı",
+      "op": "210.0"
+    },
+    {
+      "tarih": "2026-06-15",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 6.0,
+      "aciklama": "Op:210 Buffer Palet Lifti Konumunu Görmüyor. Müdahale edildi.",
+      "op": "210.0"
+    },
+    {
+      "tarih": "2026-06-15",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 6.0,
+      "aciklama": "Op:180 Robot Endofcyc Son Adımını Tamamlayamadı.",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-15",
+      "vardiya": "C",
+      "sebep": "Set-Up",
+      "hat": "DMF4",
+      "sure": 160.0,
+      "aciklama": "V710 SETUP",
+      "op": "Hat Genel"
+    },
+    {
+      "tarih": "2026-06-15",
+      "vardiya": "C",
+      "sebep": "Parça Yok",
+      "hat": "DMF4",
+      "sure": 60.0,
+      "aciklama": "Op:10 Dan Hat Yüklemesi Yapılamıyor. MALZEME YOK.",
+      "op": "Hat Genel"
+    },
+    {
+      "tarih": "2026-06-15",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 40.0,
+      "aciklama": "Hat İçi Arizalar Giderildi. ( Op:30 Start Almıyor. Op:30 Asansör Hareket Etmiyor",
+      "op": "Hat Genel"
+    },
+    {
+      "tarih": "2026-06-15",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 8.0,
+      "aciklama": "Op:70 Sıcaklık Hatasına Geçiyor. Op:75 Gripper Kapatıyor. Hafıza Karıştı. Reseta",
+      "op": "75.0"
+    },
+    {
+      "tarih": "2026-06-15",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 12.0,
+      "aciklama": "Op:50 Yağ Bitti. Diğer Yağa Geçildi. Walf Kaçırıyor. Bakıma bilgi verildi.",
+      "op": "50.0"
+    },
+    {
+      "tarih": "2026-06-14",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "OP50 2 Pompa Varilide Hava Yaptı Bakım Müdahale Etii ",
+      "op": "50.0"
+    },
+    {
+      "tarih": "2026-06-14",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "OP200 OP210 Arasında Palet Sıkıştı ",
+      "op": "200.0"
+    },
+    {
+      "tarih": "2026-06-14",
+      "vardiya": "A",
+      "sebep": "Set-Up",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "OP250 Datamatrix Etiket Değişimi Yapıldı ",
+      "op": "250.0"
+    },
+    {
+      "tarih": "2026-06-14",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "OP180 MessMatık Lınear Yolda Takılma",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-14",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "OP70 Merkezleme Hatası",
+      "op": "70.0"
+    },
+    {
+      "tarih": "2026-06-14",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "OP180 Kolet Taşıyıcı Kol Üst Sensör Görmüyor ",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-14",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "OP75 Merkezleme Hatası Temizlik Yapıldı ",
+      "op": "75.0"
+    },
+    {
+      "tarih": "2026-06-14",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 6.0,
+      "aciklama": "Op70 AZOT KAYNAKLI KAYNAK YUZEYLERI BOZUK AYAR YAPILDI",
+      "op": "70.0"
+    },
+    {
+      "tarih": "2026-06-14",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op180 balans elementı kanalda takılma",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-14",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "terazı agırlık hatası",
+      "op": "20.0"
+    },
+    {
+      "tarih": "2026-06-14",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op70 LIFT HAFIZA KARISIKLIGI",
+      "op": "70.0"
+    },
+    {
+      "tarih": "2026-06-14",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "210 ONCESI DAYAMA SENSOR GORMUYOR",
+      "op": "210.0"
+    },
+    {
+      "tarih": "2026-06-14",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op75 MERKEZLEME HATASI",
+      "op": "75.0"
+    },
+    {
+      "tarih": "2026-06-14",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "FINAL ROBOT CARPISMA HATASI",
+      "op": "270.0"
+    },
+    {
+      "tarih": "2026-06-14",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 9.0,
+      "aciklama": "Op:50 Yağlama Yeterli Seviyede Yağ Basamıyor. Bakım tarafından müdahale edildi.",
+      "op": "50.0"
+    },
+    {
+      "tarih": "2026-06-14",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op:75 Merkezleyici Hatası. ",
+      "op": "75.0"
+    },
+    {
+      "tarih": "2026-06-14",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 10.0,
+      "aciklama": "Op:270 Final Robot Çarpışma Hatasına Geçti. Manuel HOME Alındı. x2",
+      "op": "270.0"
+    },
+    {
+      "tarih": "2026-06-14",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op:180 Linear yolda welding sıkışması.",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-14",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op:250 Datamatrix Vakum Yapamadı.",
+      "op": "250.0"
+    },
+    {
+      "tarih": "2026-06-14",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op:70 Stoper Saldı Paletler Karıştı.",
+      "op": "70.0"
+    },
+    {
+      "tarih": "2026-06-14",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op:180 Mesmatik Linear yolda pislik birikmiş. Temizlendi Hava Tutuldu.",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-13",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Mesmatik Linear yolda Welding Takıldı.X3",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-13",
+      "vardiya": "A",
+      "sebep": "Set-Up",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op250 Ribon Değişimi Yapıldı ",
+      "op": "250.0"
+    },
+    {
+      "tarih": "2026-06-13",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op180 Kolet Taşıyıcı Kol Üst Sensör Görmüyor ",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-13",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op250 Datamatrix Vakum Hatası ",
+      "op": "250.0"
+    },
+    {
+      "tarih": "2026-06-13",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op75 Merkezleme Hatası Temizlik Yapıldı ",
+      "op": "75.0"
+    },
+    {
+      "tarih": "2026-06-13",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 29.0,
+      "aciklama": "Dengeleme Robotu Beklemelı Çalışıyor kapatıldı Reset AllBits Yapıldı",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-13",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 18.0,
+      "aciklama": "Op 75 Merkezleme Hatası 6X",
+      "op": "75.0"
+    },
+    {
+      "tarih": "2026-06-13",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op 10 Kamera Ayarı Yapıldı",
+      "op": "10.0"
+    },
+    {
+      "tarih": "2026-06-13",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 10.0,
+      "aciklama": "MessMatık Lınear Yolda Takılma X2",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-13",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op:30 Manipülatör Alt Kalıba Parçayı Oturtamadı.2x Müdahale edildi.",
+      "op": "30.0"
+    },
+    {
+      "tarih": "2026-06-13",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op:180 Çatal Pozisyonu Göremedi.",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-13",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op:70 Merkezleyici Hatası 2x",
+      "op": "70.0"
+    },
+    {
+      "tarih": "2026-06-13",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op:200&210 Arası Palet takıldı.",
+      "op": "200.0"
+    },
+    {
+      "tarih": "2026-06-13",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op:75 Merkezleyici Hatası.",
+      "op": "75.0"
+    },
+    {
+      "tarih": "2026-06-13",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op:250 Datamatrix Vakum Yapamadı. 2X",
+      "op": "250.0"
+    },
+    {
+      "tarih": "2026-06-13",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op:50 Yağlama Hava yaptı. havası alındı",
+      "op": "50.0"
+    },
+    {
+      "tarih": "2026-06-12",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "op200 Sekman İtleme Pistonu Sıkıştı ",
+      "op": "200.0"
+    },
+    {
+      "tarih": "2026-06-12",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "op250 Datamatrıx Vakum Hatası ",
+      "op": "250.0"
+    },
+    {
+      "tarih": "2026-06-12",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 8.0,
+      "aciklama": "op140 Sarsak tan Perçin Gelmiyor  Aktarıcı Aparat  Gevşemiş",
+      "op": "140.0"
+    },
+    {
+      "tarih": "2026-06-12",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "op180 Dengeleme Linear Yolunda Welding Sıkıştı ",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-12",
+      "vardiya": "A",
+      "sebep": "Set-Up",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "op250 Datamatrix Etiket Değişimi Yapıldı ",
+      "op": "250.0"
+    },
+    {
+      "tarih": "2026-06-12",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "op75 Transfer Lift Yukarıda Hatası Manuel Müdahele Edildi ",
+      "op": "75.0"
+    },
+    {
+      "tarih": "2026-06-12",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 7.0,
+      "aciklama": "op190 ST1 Parçayı Oturtamadı açı verildi. ",
+      "op": "190.0"
+    },
+    {
+      "tarih": "2026-06-12",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 13.0,
+      "aciklama": "op140 Perçin Çakamıyor Müdahale Edildi ",
+      "op": "140.0"
+    },
+    {
+      "tarih": "2026-06-12",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 15.0,
+      "aciklama": "OP70-OP75 End of cycle adımları tamamlamadı",
+      "op": "70.0"
+    },
+    {
+      "tarih": "2026-06-12",
+      "vardiya": "B",
+      "sebep": "Set-Up",
+      "hat": "DMF4",
+      "sure": 140.0,
+      "aciklama": "HR18 Setup",
+      "op": "Hat Genel"
+    },
+    {
+      "tarih": "2026-06-12",
+      "vardiya": "B",
+      "sebep": "Kalıp Arıza",
+      "hat": "DMF4",
+      "sure": 48.0,
+      "aciklama": "OP70 Merkezleme ayarı",
+      "op": "70.0"
+    },
+    {
+      "tarih": "2026-06-12",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op:270 Scrap Band Varlık Sensörü Ayarlandı.",
+      "op": "270.0"
+    },
+    {
+      "tarih": "2026-06-12",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op:75 Merkezleyici Hatası.",
+      "op": "75.0"
+    },
+    {
+      "tarih": "2026-06-12",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op:180 Mesmatik Linear yolda Welding Takıldı.",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-12",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Op:210 Ara Transfer Lift Palet dayaması Çıktı. Müdahale edildi.",
+      "op": "210.0"
+    },
+    {
+      "tarih": "2026-06-12",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 10.0,
+      "aciklama": "Op:250 Datamatrix Vakum Yapamadı. 2X",
+      "op": "250.0"
+    },
+    {
+      "tarih": "2026-06-11",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 10.0,
+      "aciklama": "Kep Aktarma Hortumundan Kep Gelmiyor Müdahale Edildi ",
+      "op": "160.0"
+    },
+    {
+      "tarih": "2026-06-11",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Tork Ölçüm Hatası ",
+      "op": "110.0"
+    },
+    {
+      "tarih": "2026-06-11",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 10.0,
+      "aciklama": "Linear Yolunda Welding Sıkışması X2",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-11",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 20.0,
+      "aciklama": "Alt Dayamalar Yukarıda Alt pozisyona İnmiyor Bakım İle  Müdahale Edildi Devreye ",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-11",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 10.0,
+      "aciklama": "Sarsaktan Pim Gelmiyor ",
+      "op": "130.0"
+    },
+    {
+      "tarih": "2026-06-11",
+      "vardiya": "A",
+      "sebep": "Parça Yok",
+      "hat": "DMF4",
+      "sure": 51.0,
+      "aciklama": "1045192C Primary Hub Bitti ",
+      "op": "10.0"
+    },
+    {
+      "tarih": "2026-06-11",
+      "vardiya": "B",
+      "sebep": "Parça Yok",
+      "hat": "DMF4",
+      "sure": 180.0,
+      "aciklama": "1045192C Primary Hub Bitti ",
+      "op": "10.0"
+    },
+    {
+      "tarih": "2026-06-11",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 9.0,
+      "aciklama": "kamera ayarı",
+      "op": "20.0"
+    },
+    {
+      "tarih": "2026-06-11",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "data matrıx vakum hatası 2x",
+      "op": "250.0"
+    },
+    {
+      "tarih": "2026-06-11",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 8.0,
+      "aciklama": "op70 palet dayama ayarı",
+      "op": "70.0"
+    },
+    {
+      "tarih": "2026-06-11",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 11.0,
+      "aciklama": "op260 rotary konum hatası start almıyor",
+      "op": "260.0"
+    },
+    {
+      "tarih": "2026-06-11",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 10.0,
+      "aciklama": "op30 hıdrolık unute arızasdı",
+      "op": "30.0"
+    },
+    {
+      "tarih": "2026-06-11",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 9.0,
+      "aciklama": "Op:200 Sekman İtici Sıkışıyor. Müdahale edildi.",
+      "op": "200.0"
+    },
+    {
+      "tarih": "2026-06-11",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 13.0,
+      "aciklama": "Op:50 Yağlama Alt Kalıb Stopere Dayanmış. Vertical Basamıyor. ",
+      "op": "50.0"
+    },
+    {
+      "tarih": "2026-06-11",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 12.0,
+      "aciklama": "Op:40 Palet Hafızaları Karıştı. Bakım tarafından müdahale edildi.",
+      "op": "40.0"
+    },
+    {
+      "tarih": "2026-06-11",
+      "vardiya": "C",
+      "sebep": "Robot Arıza",
+      "hat": "DMF4",
+      "sure": 8.0,
+      "aciklama": "Op:270 Robot Alan Tarayıcı Hatası",
+      "op": "270.0"
+    },
+    {
+      "tarih": "2026-06-11",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 8.0,
+      "aciklama": "Op:75 Glass Sıcaklık Hatası. Cam Isı Hatası.x2",
+      "op": "75.0"
+    },
+    {
+      "tarih": "2026-06-11",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 9.0,
+      "aciklama": "Op:160 Cap Çakma Sensörleri Temizlendi.",
+      "op": "160.0"
+    },
+    {
+      "tarih": "2026-06-11",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 7.0,
+      "aciklama": "Op:180 Mesmatik Linear yolda welding takılıyor. Müdahale edildi.",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-10",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 15.0,
+      "aciklama": "OP100 Üst Tool Pokoyoke Sensörü Görmüyor Sensör Ayarı Yapıldı Üst Aparat Orta Gö",
+      "op": "100.0"
+    },
+    {
+      "tarih": "2026-06-10",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 9.0,
+      "aciklama": "Datamatrix İçerik Hatası (2)",
+      "op": "250.0"
+    },
+    {
+      "tarih": "2026-06-10",
+      "vardiya": "A",
+      "sebep": "Robot Arıza",
+      "hat": "DMF4",
+      "sure": 8.0,
+      "aciklama": "OP270 Robot Pos 2'den Parçayı Alamadı (2)",
+      "op": "270.0"
+    },
+    {
+      "tarih": "2026-06-10",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 5.0,
+      "aciklama": "Linear Kanalda Welding Sıkışması ",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-10",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 9.0,
+      "aciklama": "Yağ Varili Hava Yaptı Havası Alındı ",
+      "op": "50.0"
+    },
+    {
+      "tarih": "2026-06-10",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 10.0,
+      "aciklama": "Sekman İtleme Piston Sıkıstı ",
+      "op": "200.0"
+    },
+    {
+      "tarih": "2026-06-10",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 7.0,
+      "aciklama": "Datamatrix Vakumlama Hatası ",
+      "op": "250.0"
+    },
+    {
+      "tarih": "2026-06-10",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 10.0,
+      "aciklama": "Cap takılması",
+      "op": "160.0"
+    },
+    {
+      "tarih": "2026-06-10",
+      "vardiya": "B",
+      "sebep": "Robot Arıza",
+      "hat": "DMF4",
+      "sure": 11.0,
+      "aciklama": "robot parcayı oturtamadı robot pos 2 mod bos yapıldı",
+      "op": "270.0"
+    },
+    {
+      "tarih": "2026-06-10",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 14.0,
+      "aciklama": "op20 yay kamera hatası   ",
+      "op": "20.0"
+    },
+    {
+      "tarih": "2026-06-10",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 7.0,
+      "aciklama": "KEP ROTARY KANALDA TAKILMA",
+      "op": "160.0"
+    },
+    {
+      "tarih": "2026-06-10",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 9.0,
+      "aciklama": "yaglama degısımı hava yaptı hava alındı",
+      "op": "50.0"
+    },
+    {
+      "tarih": "2026-06-10",
+      "vardiya": "B",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 9.0,
+      "aciklama": "op30 hub pım parca koyarken atma yapıyor",
+      "op": "30.0"
+    },
+    {
+      "tarih": "2026-06-10",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 10.0,
+      "aciklama": "Op 160 Yabancı Madde kanalı tıkadı ",
+      "op": "160.0"
+    },
+    {
+      "tarih": "2026-06-10",
+      "vardiya": "C",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 7.0,
+      "aciklama": "Op 180 kaynak yapılamadı hatası 3X",
+      "op": "180.0"
+    },
+    {
+      "tarih": "2026-06-09",
+      "vardiya": "A",
+      "sebep": "Makine Arıza",
+      "hat": "DMF4",
+      "sure": 20.0,
+      "aciklama": "OP75 Transfer Lift Palet Tutucu Havası Körlendi Tutucu SAbit Konuma Getirildi ",
+      "op": "75.0"
+    }
+  ]
+};
+const COLORS = {"DMF1": "#2196F3", "DMF2": "#4CAF50", "DMF3": "#FF9800", "DMF4": "#9C27B0", "PFW1": "#F44336", "PFW2": "#00BCD4", "PFW3": "#8BC34A", "PFW4": "#FF5722", "ITL": "#607D8B"};
+
+// ── utils ──────────────────────────────────────────────────────────────────
+function hex2rgba(h, a=1) {
+  const r=parseInt(h.slice(1,3),16), g=parseInt(h.slice(3,5),16), b=parseInt(h.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+function fmt(n) { return new Intl.NumberFormat('tr-TR').format(Math.round(n)); }
+
+function badgeCls(s) {
+  if (/Arıza|Robot/.test(s))  return 'b-ariza';
+  if (/Kalite/.test(s))       return 'b-kalite';
+  if (/Parça|Sipariş|Besleme/.test(s)) return 'b-parca';
+  if (/Set|Kesici/.test(s))   return 'b-setup';
+  if (/Metod|Arge/.test(s))   return 'b-metod';
+  if (/Planlı/.test(s))       return 'b-plan';
+  return 'b-diger';
+}
+
+// ── tabs ──────────────────────────────────────────────────────────────────
+function showTab(id, el) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  el.classList.add('active');
+}
+
+// ── E1: KPI ───────────────────────────────────────────────────────────────
+document.getElementById('meta-date').textContent = 'Son güncelleme: ' + DATA.meta.guncelleme;
+
+const grid = document.getElementById('kpi-grid');
+DATA.meta.hatlar.forEach(hat => {
+  const k = DATA.kpi[hat];
+  const c = COLORS[hat];
+  const trpPct = k.ort_trp ? (k.ort_trp * 100) : null;
+  const trpStr = trpPct !== null ? trpPct.toFixed(1) + '%' : '—';
+  const trpColor = trpPct === null ? '#888' : trpPct >= 75 ? '#4ade80' : trpPct >= 55 ? '#facc15' : '#f87171';
+  grid.innerHTML += `
+    <div class="kpi-card" style="border-top:3px solid ${c}">
+      <div class="kpi-hat" style="color:${c}">${hat}</div>
+      <div class="kpi-row">
+        <div class="kpi-label">Toplam Üretim</div>
+        <div class="kpi-val">${fmt(k.toplam_uretim)}</div>
+        <div class="kpi-sub">Haziran: ${fmt(k.son_ay_uretim)} adet</div>
+      </div>
+      <div class="kpi-row" style="margin-top:10px">
+        <div class="kpi-label">TRP (son 4 hafta ort.)</div>
+        <div class="kpi-val" style="color:${trpColor};font-size:24px">${trpStr}</div>
+        <div class="trp-bar"><div class="trp-fill" style="width:${Math.min(trpPct||0,100)}%;background:${trpColor}"></div></div>
+      </div>
+      <div class="kpi-mini">
+        <div class="kpi-mini-item">
+          <div class="kpi-label">Rework</div>
+          <div class="kpi-val" style="color:#fde047">${fmt(k.toplam_rework)}</div>
+        </div>
+        <div class="kpi-mini-item">
+          <div class="kpi-label">İskarta</div>
+          <div class="kpi-val" style="color:#f87171">${fmt(k.toplam_iskarta)}</div>
+        </div>
+      </div>
+    </div>`;
+});
+
+// ── Monthly bar charts ─────────────────────────────────────────────────────
+function monthlyChart(canvasId, hats) {
+  new Chart(document.getElementById(canvasId), {
+    type: 'bar',
+    data: {
+      labels: DATA.aylik_etiketler,
+      datasets: hats.map(h => ({
+        label: h, data: DATA.aylik_uretim[h],
+        backgroundColor: hex2rgba(COLORS[h], .75),
+        borderColor: COLORS[h], borderWidth: 1, borderRadius: 4,
+      }))
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#e2e8f0', font: { size: 11 } } } },
+      scales: {
+        x: { grid: { color: '#2e3348' }, ticks: { color: '#8892a4' } },
+        y: { grid: { color: '#2e3348' }, ticks: { color: '#8892a4', callback: v => fmt(v) } }
+      }
+    }
+  });
+}
+monthlyChart('ch-monthly-dmf', ['DMF1','DMF2','DMF3','DMF4']);
+monthlyChart('ch-monthly-pfw', ['PFW1','PFW2','PFW3','PFW4','ITL']);
+
+// ── E2: Trend ──────────────────────────────────────────────────────────────
+let activeHats = new Set(['DMF1','DMF2','DMF3','DMF4']);
+let chProd, chTrp;
+
+const btnDiv = document.getElementById('hat-filter-btns');
+DATA.meta.hatlar.forEach(h => {
+  const b = document.createElement('button');
+  b.className = 'hat-btn' + (activeHats.has(h) ? ' on' : '');
+  b.style.backgroundColor = activeHats.has(h) ? COLORS[h] : '';
+  b.textContent = h;
+  b.onclick = () => {
+    if (activeHats.has(h)) { activeHats.delete(h); b.classList.remove('on'); b.style.backgroundColor=''; }
+    else { activeHats.add(h); b.classList.add('on'); b.style.backgroundColor=COLORS[h]; }
+    updateTrend();
+  };
+  btnDiv.appendChild(b);
+});
+
+function trendDS(series) {
+  return [...activeHats].map(h => ({
+    label: h, data: series[h] || [],
+    borderColor: COLORS[h], backgroundColor: hex2rgba(COLORS[h], .08),
+    borderWidth: 2.5, pointRadius: 3, tension: 0.3, fill: false,
+  }));
+}
+
+const trendOpts = (yFmt) => ({
+  responsive: true, maintainAspectRatio: false,
+  interaction: { mode: 'index', intersect: false },
+  plugins: {
+    legend: { labels: { color: '#e2e8f0', font: { size: 11 } } },
+    tooltip: { backgroundColor: '#1a1d27', borderColor: '#2e3348', borderWidth: 1, titleColor: '#e2e8f0', bodyColor: '#e2e8f0' }
+  },
+  scales: {
+    x: { grid: { color: '#2e3348' }, ticks: { color: '#8892a4', maxTicksLimit: 12, maxRotation: 45 } },
+    y: { grid: { color: '#2e3348' }, ticks: { color: '#8892a4', callback: yFmt } }
+  }
+});
+
+chProd = new Chart(document.getElementById('ch-trend-prod'), {
+  type: 'line',
+  data: { labels: DATA.haftalik_etiketler, datasets: trendDS(DATA.haftalik_uretim) },
+  options: trendOpts(v => fmt(v))
+});
+chTrp = new Chart(document.getElementById('ch-trend-trp'), {
+  type: 'line',
+  data: { labels: DATA.haftalik_etiketler, datasets: trendDS(DATA.haftalik_trp) },
+  options: { ...trendOpts(v => v + '%'), scales: { x: trendOpts().scales.x, y: { ...trendOpts().scales.y, min: 0, max: 100, ticks: { color: '#8892a4', callback: v => v+'%' } } } }
+});
+
+function updateTrend() {
+  chProd.data.datasets = trendDS(DATA.haftalik_uretim); chProd.update();
+  chTrp.data.datasets  = trendDS(DATA.haftalik_trp);   chTrp.update();
+}
+
+// ── E3: Pareto ─────────────────────────────────────────────────────────────
+const paretoColors = DATA.durus_pareto_etiket.map((_,i) => `hsl(${i*32%360},60%,55%)`);
+
+new Chart(document.getElementById('ch-pareto-cat'), {
+  type: 'bar',
+  data: {
+    labels: DATA.durus_pareto_etiket,
+    datasets: [{ label: 'Duruş (dk)', data: DATA.durus_pareto_deger, backgroundColor: paretoColors, borderRadius: 4 }]
+  },
+  options: {
+    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: '#2e3348' }, ticks: { color: '#8892a4', callback: v => fmt(v)+' dk' } },
+      y: { grid: { color: 'transparent' }, ticks: { color: '#e2e8f0' } }
+    }
+  }
+});
+
+new Chart(document.getElementById('ch-pareto-hat'), {
+  type: 'bar',
+  data: {
+    labels: DATA.durus_hat_etiket,
+    datasets: [{
+      label: 'Toplam Duruş (dk)', data: DATA.durus_hat_deger, borderRadius: 4,
+      backgroundColor: DATA.durus_hat_etiket.map(h => hex2rgba(COLORS[h]||'#888', .8)),
+      borderColor: DATA.durus_hat_etiket.map(h => COLORS[h]||'#888'), borderWidth: 1,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: '#2e3348' }, ticks: { color: '#8892a4' } },
+      y: { grid: { color: '#2e3348' }, ticks: { color: '#8892a4', callback: v => fmt(v)+' dk' } }
+    }
+  }
+});
+
+// Monthly stacked
+const allSebepler = DATA.durus_pareto_etiket;
+new Chart(document.getElementById('ch-durus-aylik'), {
+  type: 'bar',
+  data: {
+    labels: DATA.durus_aylar,
+    datasets: allSebepler.map((s, i) => ({
+      label: s, stack: 'stk',
+      data: DATA.durus_aylar.map(ay => DATA.durus_aylik[ay]?.[s] || 0),
+      backgroundColor: `hsl(${i*32%360},60%,50%)`,
+    }))
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { labels: { color: '#e2e8f0', font: { size: 10 }, boxWidth: 12 } } },
+    scales: {
+      x: { stacked: true, grid: { color: '#2e3348' }, ticks: { color: '#8892a4' } },
+      y: { stacked: true, grid: { color: '#2e3348' }, ticks: { color: '#8892a4', callback: v => fmt(v) } }
+    }
+  }
+});
+
+// ── E4: Table ──────────────────────────────────────────────────────────────
+const hatSel  = document.getElementById('f-hat');
+const sebepSel= document.getElementById('f-sebep');
+[...new Set(DATA.son_duruslar.map(r => r.hat))].sort()
+  .forEach(h => { const o=document.createElement('option'); o.value=h; o.textContent=h; hatSel.appendChild(o); });
+[...new Set(DATA.son_duruslar.map(r => r.sebep))].sort()
+  .forEach(s => { const o=document.createElement('option'); o.value=s; o.textContent=s; sebepSel.appendChild(o); });
+
+function filterTable() {
+  const hat  = document.getElementById('f-hat').value;
+  const sebep= document.getElementById('f-sebep').value;
+  const vrd  = document.getElementById('f-vardiya').value;
+  const txt  = document.getElementById('f-text').value.toLowerCase();
+  const rows = DATA.son_duruslar.filter(r =>
+    (!hat   || r.hat === hat) &&
+    (!sebep || r.sebep === sebep) &&
+    (!vrd   || r.vardiya === vrd) &&
+    (!txt   || r.aciklama.toLowerCase().includes(txt))
+  );
+  document.getElementById('row-count').textContent = rows.length + ' kayıt';
+  const tbody = document.getElementById('durus-tbody');
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px">Kayıt bulunamadı</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.slice(0,200).map(r => {
+    const hc = COLORS[r.hat] || '#888';
+    const sc = r.sure >= 120 ? '#f87171' : r.sure >= 60 ? '#facc15' : '#e2e8f0';
+    return `<tr>
+      <td>${r.tarih}</td>
+      <td style="font-weight:600">${r.vardiya}</td>
+      <td style="color:${hc};font-weight:600">${r.hat}</td>
+      <td><span class="badge ${badgeCls(r.sebep)}">${r.sebep}</span></td>
+      <td style="color:${sc};font-weight:700">${r.sure}</td>
+      <td style="color:#cbd5e1;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.aciklama}</td>
+      <td style="color:#8892a4">${r.op}</td>
+    </tr>`;
+  }).join('');
+}
+filterTable();
+</script>
+</body>
+</html>
