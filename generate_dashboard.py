@@ -64,7 +64,7 @@ for hat in ['DMF1','DMF2','DMF3','DMF4']:
         prod = safe_float(row[4])
         if prod > 0:
             d['prod'] += prod
-            if ref and ref != 'None':
+            if ref and ref != 'None' and ' ' not in ref:
                 ref_prod[hat][ref] = ref_prod[hat].get(ref,0) + prod
 
         for ci,cn in DMF_DC:
@@ -72,8 +72,8 @@ for hat in ['DMF1','DMF2','DMF3','DMF4']:
         if len(row)>18: d['rework']  += safe_float(row[18])
         if len(row)>20: d['iskarta'] += safe_float(row[20])
 
-        # Referans: son saat satırında (saat 8/16/24) bulunur
-        if ref and ref != 'None' and v:
+        # Referans: son saat satırında (saat 8/16/24) bulunur; boşluk içeren değerler (ör. "Çalışma Yok") atlanır
+        if ref and ref != 'None' and v and ' ' not in ref:
             ref_lookup[hat][(ds, v)] = ref
 
         # Vardiya Toplam: ilk non-zero olan satırı al
