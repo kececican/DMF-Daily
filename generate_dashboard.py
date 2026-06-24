@@ -37,6 +37,7 @@ daily_prod  = {}   # {hat: {date: {prod, durus, rework, iskarta}}}
 trp_shifts  = {}   # {hat: [{date,vardiya,vt,teorik}]}
 vardiya_raw = {}   # {hat: {(date,vardiya): toplam_adet}} — ilk non-zero
 ref_prod    = {}   # {hat: {ref: toplam_adet}}
+ref_lookup  = {}   # {hat: {(date,vardiya): ref}} — duruş için
 
 DMF_DC = [(7,'Çay/Yemek'),(8,'Temizlik'),(9,'Metod/Proje'),
            (10,'Parça Yok'),(11,'SetUp'),(12,'Tuzak Parça'),
@@ -48,6 +49,7 @@ for hat in ['DMF1','DMF2','DMF3','DMF4']:
     trp_shifts[hat]  = []
     vardiya_raw[hat] = {}
     ref_prod[hat]    = {}
+    ref_lookup[hat]  = {}
 
     for row in ws.iter_rows(min_row=3, values_only=True):
         if not (row[0] and isinstance(row[0], datetime)): continue
@@ -69,6 +71,10 @@ for hat in ['DMF1','DMF2','DMF3','DMF4']:
             if len(row)>ci: d['durus'][cn] += safe_float(row[ci])
         if len(row)>18: d['rework']  += safe_float(row[18])
         if len(row)>20: d['iskarta'] += safe_float(row[20])
+
+        # Referans: son saat satırında (saat 8/16/24) bulunur
+        if ref and ref != 'None' and v:
+            ref_lookup[hat][(ds, v)] = ref
 
         # Vardiya Toplam: ilk non-zero olan satırı al
         vt = safe_float(row[5])
@@ -187,11 +193,16 @@ for row in ws_dur.iter_rows(min_row=2, values_only=True):
     if not (row[0] and isinstance(row[0], datetime)): continue
     sure = safe_float(row[4])
     if sure <= 0: continue
+    hat_d  = str(row[3]) if row[3] else ''
+    vrd_d  = str(row[1]) if row[1] else ''
+    tar_d  = row[0].strftime('%Y-%m-%d')
+    ref_d  = ref_lookup.get(hat_d, {}).get((tar_d, vrd_d), '')
     durus_kayitlar.append({
-        'tarih':   row[0].strftime('%Y-%m-%d'),
-        'vardiya': str(row[1]) if row[1] else '',
+        'tarih':   tar_d,
+        'vardiya': vrd_d,
         'sebep':   str(row[2]) if row[2] else 'Bilinmiyor',
-        'hat':     str(row[3]) if row[3] else '',
+        'hat':     hat_d,
+        'ref':     ref_d,
         'sure':    round(sure,1),
         'aciklama':str(row[5])[:90] if row[5] else '',
         'op':      str(row[6]) if row[6] else '',
@@ -507,7 +518,7 @@ html = f"""<!DOCTYPE html>
       <span id="fcount" style="font-size:12px;color:var(--mut);white-space:nowrap"></span>
     </div>
     <table>
-      <thead><tr><th>Tarih</th><th>Vrd.</th><th>Hat</th><th>Sebep</th><th>Süre(dk)</th><th>Açıklama</th><th>OP</th></tr></thead>
+      <thead><tr><th>Tarih</th><th>Vrd.</th><th>Hat</th><th>Referans</th><th>Sebep</th><th>Süre(dk)</th><th>Açıklama</th><th>OP</th></tr></thead>
       <tbody id="dur-tbody"></tbody>
     </table>
   </div>
@@ -719,7 +730,7 @@ function flt(){{
   if(!rows.length){{tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--mut);padding:28px">Kayıt bulunamadı</td></tr>';return;}}
   tb.innerHTML=rows.slice(0,200).map(r=>{{
     const hc=HC[r.hat]||'#888',sc=r.sure>=120?'#f87171':r.sure>=60?'#facc15':'#e2e8f0';
-    return`<tr><td>${{r.tarih}}</td><td style="font-weight:600">${{r.vardiya}}</td><td style="color:${{hc}};font-weight:600">${{r.hat}}</td><td><span class="badge ${{badgeCls(r.sebep)}}">${{r.sebep}}</span></td><td style="color:${{sc}};font-weight:700">${{r.sure}}</td><td style="color:#cbd5e1;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${{r.aciklama}}</td><td style="color:#8892a4">${{r.op}}</td></tr>`;
+    return`<tr><td>${{r.tarih}}</td><td style="font-weight:600">${{r.vardiya}}</td><td style="color:${{hc}};font-weight:600">${{r.hat}}</td><td style="color:#f0c040;font-weight:600;font-size:12px">${{r.ref||'—'}}</td><td><span class="badge ${{badgeCls(r.sebep)}}">${{r.sebep}}</span></td><td style="color:${{sc}};font-weight:700">${{r.sure}}</td><td style="color:#cbd5e1;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${{r.aciklama}}</td><td style="color:#8892a4">${{r.op}}</td></tr>`;
   }}).join('');
 }}
 flt();
