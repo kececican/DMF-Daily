@@ -331,7 +331,7 @@ data_json = {
     'pareto_hat_deger':  [round(x[1],0) for x in pareto_hat],
     'durus_aylar':  aylar,
     'durus_aylik':  {ay:{s:round(v,0) for s,v in sd.items()} for ay,sd in durus_aylik.items()},
-    'son_duruslar': durus_kayitlar[:200],
+    'son_duruslar': durus_kayitlar,
 }
 
 # ── HTML ──────────────────────────────────────────────────────────────────────
