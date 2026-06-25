@@ -267,6 +267,25 @@ for hat in ALL_HATS:
         'data':   [int(r[1]) for r in sorted_refs],
     }
 
+# TRP per reference: join trp_shifts with ref_lookup
+ref_trp_lists = {hat: defaultdict(list) for hat in ['DMF1','DMF2','DMF3','DMF4']}
+for hat in ['DMF1','DMF2','DMF3','DMF4']:
+    for s in trp_shifts[hat]:
+        ref = ref_lookup[hat].get((s['date'], s['vardiya']))
+        if ref:
+            ref_trp_lists[hat][ref].append(s['vt'] / s['teorik'])
+
+ref_trp_avg = {}
+for hat in ['DMF1','DMF2','DMF3','DMF4']:
+    entries = [(ref, round(sum(vals)/len(vals)*100, 1), len(vals))
+               for ref, vals in ref_trp_lists[hat].items() if len(vals) >= 3]
+    entries.sort(key=lambda x: -x[1])
+    ref_trp_avg[hat] = {
+        'labels': [e[0] for e in entries],
+        'trp':    [e[1] for e in entries],
+        'shifts': [e[2] for e in entries],
+    }
+
 # ── KPI ──────────────────────────────────────────────────────────────────────
 kpi = {}
 for hat in ALL_HATS:
@@ -336,6 +355,7 @@ data_json = {
     'aylik_uretim':    monthly_prod,
     'vardiya_chart':   vardiya_chart,
     'ref_top':         ref_top,
+    'ref_trp_avg':     ref_trp_avg,
     'pareto_cat_etiket': [x[0] for x in pareto_cat],
     'pareto_cat_deger':  [round(x[1],0) for x in pareto_cat],
     'pareto_hat_etiket': [x[0] for x in pareto_hat],
@@ -491,8 +511,11 @@ html = f"""<!DOCTYPE html>
 <div id="screen-e4" class="screen">
   <div class="hat-sel"><span>Hat:</span><select id="ref-hat-sel" onchange="renderRef()"></select></div>
   <div class="crow">
-    <div class="ccard"><div class="ctitle">Referans Bazında Toplam Üretim (Adet)</div><div class="cwrap" style="height:340px"><canvas id="ch-ref-bar"></canvas></div></div>
-    <div class="ccard"><div class="ctitle">Referans Üretim Payı (%)</div><div class="cwrap" style="height:340px"><canvas id="ch-ref-pie"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">Referans Bazında Toplam Üretim (Adet)</div><div class="cwrap" style="height:310px"><canvas id="ch-ref-bar"></canvas></div></div>
+    <div class="ccard"><div class="ctitle">Referans Üretim Payı (%)</div><div class="cwrap" style="height:310px"><canvas id="ch-ref-pie"></canvas></div></div>
+  </div>
+  <div class="crow full">
+    <div class="ccard"><div class="ctitle">Referans Bazında Ortalama TRP (%) — en az 3 vardiya</div><div class="cwrap" style="height:260px"><canvas id="ch-ref-trp"></canvas></div></div>
   </div>
 </div>
 
@@ -681,13 +704,14 @@ renderVardiya();
 // ── E4: Referans ─────────────────────────────────────────────────────────────
 const refSel=document.getElementById('ref-hat-sel');
 D.meta.hatlar.forEach(h=>{{const o=document.createElement('option');o.value=h;o.textContent=h;refSel.appendChild(o);}});
-let chRB,chRP;
+let chRB,chRP,chRT;
 const refColors=['#2196F3','#4CAF50','#FF9800','#9C27B0','#F44336','#00BCD4','#8BC34A','#FF5722'];
 function renderRef(){{
   const hat=refSel.value;
   const r=D.ref_top[hat];
   if(chRB)chRB.destroy();
   if(chRP)chRP.destroy();
+  if(chRT)chRT.destroy();
   chRB=new Chart(document.getElementById('ch-ref-bar'),{{type:'bar',
     data:{{labels:r.labels,datasets:[{{label:'Üretim (adet)',data:r.data,backgroundColor:refColors.map(c=>h2r(c,.8)),borderColor:refColors,borderWidth:1,borderRadius:4}}]}},
     options:{{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{{legend:{{display:false}}}},
@@ -697,6 +721,25 @@ function renderRef(){{
     data:{{labels:r.labels,datasets:[{{data:r.data,backgroundColor:refColors.map(c=>h2r(c,.8)),borderColor:refColors,borderWidth:2}}]}},
     options:{{responsive:true,maintainAspectRatio:false,plugins:{{legend:baseLegend(),tooltip:{{callbacks:{{label:ctx=>ctx.label+': '+fmt(ctx.raw)}}}}}}}}
   }});
+  const rt=D.ref_trp_avg[hat];
+  if(rt&&rt.labels.length){{
+    const barColors=rt.trp.map(v=>v>=70?'#4ade80':v>=55?'#60a5fa':'#f87171');
+    chRT=new Chart(document.getElementById('ch-ref-trp'),{{type:'bar',
+      data:{{labels:rt.labels,datasets:[{{label:'Ort. TRP (%)',data:rt.trp,backgroundColor:barColors,borderRadius:4}}]}},
+      options:{{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+        plugins:{{legend:{{display:false}},tooltip:{{callbacks:{{label:ctx=>ctx.parsed.x.toFixed(1)+'%  ('+rt.shifts[ctx.dataIndex]+' vardiya)'}}}}}},
+        scales:{{
+          x:{{...baseScales().x,min:0,max:100,ticks:{{color:'#8892a4',callback:v=>v+'%'}}}},
+          y:{{grid:{{color:'transparent'}},ticks:{{color:'#e2e8f0'}}}}
+        }}
+      }}
+    }});
+  }} else {{
+    const ctx=document.getElementById('ch-ref-trp').getContext('2d');
+    ctx.clearRect(0,0,9999,9999);
+    ctx.fillStyle='#8892a4';ctx.font='14px sans-serif';ctx.textAlign='center';
+    ctx.fillText('Bu hat için referans bazlı TRP verisi yok (PFW/ITL)',ctx.canvas.width/2,ctx.canvas.height/2);
+  }}
 }}
 renderRef();
 
