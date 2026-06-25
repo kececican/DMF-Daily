@@ -466,8 +466,8 @@ html = f"""<!DOCTYPE html>
 <div class="tabs">
   <div class="tab active"  onclick="T('e1',this)">📊 KPI Özet</div>
   <div class="tab"         onclick="T('e2',this)">📈 Üretim Trendi</div>
-  <div class="tab"         onclick="T('e3',this)">🔀 Vardiya Analizi</div>
-  <div class="tab"         onclick="T('e4',this)">🏷 Referans Dağılımı</div>
+  <div class="tab"         onclick="T('e3',this);renderVardiya()">🔀 Vardiya Analizi</div>
+  <div class="tab"         onclick="T('e4',this);renderRef()">🏷 Referans Dağılımı</div>
   <div class="tab"         onclick="T('e5',this)">⏱ Duruş Analizi</div>
   <div class="tab"         onclick="T('e6',this)">📋 Duruş Detay</div>
 </div>
