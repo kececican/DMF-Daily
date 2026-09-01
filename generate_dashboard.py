@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """DMF Daily Dashboard Generator — Excel → HTML  (Kapsamlı versiyon)"""
 
+import os
 import openpyxl
 import json
 from datetime import datetime
@@ -375,13 +376,24 @@ HAT_COLORS = {
 data_js      = json.dumps(data_json, ensure_ascii=False, indent=2)
 hat_colors_js= json.dumps(HAT_COLORS)
 
+# Inline Chart.js so the dashboard is fully self-contained (works without a CDN /
+# internet, e.g. htmlpreview, file://, offline). Falls back to the CDN tag if the
+# vendored copy is missing.
+_chart_lib_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "vendor", "chart.umd.min.js")
+try:
+    with open(_chart_lib_path, encoding="utf-8") as _f:
+        _chart_lib = _f.read().replace("</script>", "<\\/script>")
+    chart_tag = "<script>\n" + _chart_lib + "\n  </script>"
+except FileNotFoundError:
+    chart_tag = '<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>'
+
 html = f"""<!DOCTYPE html>
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>DMF Daily – Üretim Dashboard</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  {chart_tag}
   <style>
     *,*::before,*::after{{box-sizing:border-box;margin:0;padding:0}}
     :root{{--bg:#0f1117;--sur:#1a1d27;--sur2:#242736;--brd:#2e3348;--txt:#e2e8f0;--mut:#8892a4;--acc:#3b82f6}}
