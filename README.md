@@ -69,14 +69,32 @@ Bu adımın bağımlılığı yoktur — sadece standart kütüphane.
 Chart.js ve datalabels eklentisi HTML'in içine gömülüdür — **internet
 bağlantısı gerekmez** (`file://`, offline veya kapalı fabrika ağı dahil).
 
-## Arayüz Özellikleri
+## Tasarım Sistemi
+
+Arayüz `design.md` (Valeo Tasarım Sistemi — Material 3 Expressive uyarlaması)
+kurallarına uyar. Renkler **daima** semantik token üzerinden kullanılır;
+kodda sabit hex yazılmaz (`design.md` §2.4).
+
+`design.md`'nin §0 ve §10 bölümleri Google Apps Script projeleri içindir; bu
+proje statik HTML ürettiğinden o iki bölüm uygulanmaz.
 
 | Özellik | Davranış |
 |---|---|
-| **Veri etiketleri** | Tüm grafiklerde kalıcı — hover gerekmez. Üst üste binen etiketler otomatik gizlenir |
-| **Light / Dark tema** | Sağ üstteki düğme. Açılış **light**, tercih tarayıcıda hatırlanır |
-| **Hat renkleri** | Her tema için ayrı palet — light temada koyulaştırılmış tonlar kullanılır |
+| **Tema** | §2.4 — açılışta işletim sistemi tercihi; kullanıcı seçimi `localStorage['valeo-theme']`'de saklanır |
+| **Tipografi** | §3 — Montserrat 600/700 (başlık), Lato 400/700 (gövde). `vendor/fonts/` altından base64 gömülür |
+| **Veri etiketleri** | Tüm grafiklerde kalıcı — hover gerekmez. Üst üste binenler otomatik gizlenir |
+| **Navigasyon** | §8-9 — geniş ekranda sol rail, dar ekranda alt bar |
+| **Seri paleti** | §2.5 — tema başına türetilmiş 9 ton; palet sarmalanırsa ek turlar zeminden uzağa kaydırılır |
+| **Tablo** | §8 — yapışkan başlık, zebra yerine hover, sayısal sütunlar sağa hizalı |
+| **Erişilebilirlik** | §11 — metin çiftleri WCAG AA (≥4.5:1), grafik serileri ≥3:1, görünür focus halkası, `prefers-reduced-motion` |
 | **Grafik kurulumu** | Sekme ilk açıldığında kurulur (gizli canvas'ta boyut hatası olmaz) |
+
+### Paletten sapmalar
+
+`design.md` §2.5 yedi seri rengi tanımlar; bu dashboard'da dokuz hat ve on üç
+duruş sebebi var. Palet, dokümanın kendi `(türetilmiş)` yöntemiyle genişletildi
+ve §11'in kontrast şartı için tema başına ayrıldı — gerekçeler
+`generate_dashboard.py` içinde satır satır yazılı.
 
 ## Dosya Yapısı
 
@@ -84,9 +102,11 @@ bağlantısı gerekmez** (`file://`, offline veya kapalı fabrika ağı dahil).
 DMF-Daily/
 ├── extract_excel.py               # Excel → data.json  (openpyxl gerekir)
 ├── generate_dashboard.py          # data.json → index.html  (bağımlılıksız)
+├── design.md                      # Valeo Tasarım Sistemi (M3E uyarlaması)
 ├── vendor/
 │   ├── chart.umd.min.js                 # Chart.js 4.4.0
-│   └── chartjs-plugin-datalabels.min.js # datalabels 2.2.0
+│   ├── chartjs-plugin-datalabels.min.js # datalabels 2.2.0
+│   └── fonts/                           # Montserrat + Lato (woff2, latin & latin-ext)
 └── dashboard/
     ├── data.json               # Ayıklanmış veri (Excel'den bağımsız cache)
     └── index.html              # Tek dosya, standalone dashboard
