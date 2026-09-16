@@ -253,7 +253,7 @@ html = f"""<!DOCTYPE html>
       <select id="f-hat"     onchange="flt()"><option value="">Tüm Hatlar</option></select>
       <select id="f-sebep"   onchange="flt()"><option value="">Tüm Sebepler</option></select>
       <select id="f-vardiya" onchange="flt()"><option value="">Vardiya</option><option>A</option><option>B</option><option>C</option></select>
-      <input  id="f-text" type="text" placeholder="Açıklama ara…" oninput="flt()" style="flex:1;min-width:160px">
+      <input  id="f-text" type="text" placeholder="Açıklama ara…" oninput="fltDebounced()" style="flex:1;min-width:160px">
       <span id="fcount" style="font-size:12px;color:var(--mut);white-space:nowrap"></span>
     </div>
     <table>
@@ -546,13 +546,15 @@ function buildE5(){{
 const hSel=document.getElementById('f-hat'),sSel=document.getElementById('f-sebep');
 [...new Set(D.son_duruslar.map(r=>r.hat))].sort().forEach(h=>{{const o=document.createElement('option');o.value=h;o.textContent=h;hSel.appendChild(o);}});
 [...new Set(D.son_duruslar.map(r=>r.sebep))].sort().forEach(s=>{{const o=document.createElement('option');o.value=s;o.textContent=s;sSel.appendChild(o);}});
+let _fltT;
+function fltDebounced(){{clearTimeout(_fltT);_fltT=setTimeout(flt,120);}}
 function flt(){{
   const h=hSel.value,s=sSel.value,v=document.getElementById('f-vardiya').value,t=document.getElementById('f-text').value.toLowerCase();
   const rows=D.son_duruslar.filter(r=>(!h||r.hat===h)&&(!s||r.sebep===s)&&(!v||r.vardiya===v)&&(!t||r.aciklama.toLowerCase().includes(t)));
   document.getElementById('fcount').textContent=rows.length+' kayıt';
   const tb=document.getElementById('dur-tbody');
   if(!rows.length){{tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--mut);padding:28px">Kayıt bulunamadı</td></tr>';return;}}
-  tb.innerHTML=rows.slice(0,200).map(r=>{{
+  tb.innerHTML=rows.map(r=>{{
     const hc=HC[r.hat]||TH.mut,sc=r.sure>=120?(TH.dark?'#f87171':'#b91c1c'):r.sure>=60?(TH.dark?'#facc15':'#a16207'):TH.txt;
     return`<tr><td>${{r.tarih}}</td><td style="font-weight:600">${{r.vardiya}}</td><td style="color:${{hc}};font-weight:600">${{r.hat}}</td><td style="color:var(--ref);font-weight:600;font-size:12px">${{r.ref||'—'}}</td><td><span class="badge ${{badgeCls(r.sebep)}}">${{r.sebep}}</span></td><td style="color:${{sc}};font-weight:700">${{r.sure}}</td><td style="color:var(--tbl);max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${{r.aciklama}}</td><td style="color:var(--mut)">${{r.op}}</td></tr>`;
   }}).join('');
