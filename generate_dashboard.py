@@ -13,12 +13,14 @@ bu proje statik HTML ürettiği için o iki bölüm uygulanmaz.
 """
 
 import os
+import sys
 import json
 import base64
 
 BASE_DIR    = os.path.dirname(os.path.abspath(__file__))
 CACHE_PATH  = os.path.join(BASE_DIR, 'dashboard', 'data.json')
 OUTPUT_PATH = os.path.join(BASE_DIR, 'dashboard', 'index.html')
+GAS_DIR     = os.path.join(BASE_DIR, 'apps-script')
 
 if not os.path.exists(CACHE_PATH):
     raise SystemExit(
@@ -30,6 +32,167 @@ with open(CACHE_PATH, encoding='utf-8') as f:
     data_json = json.load(f)
 
 print("HTML oluşturuluyor...")
+
+
+# ── GAS: veri giriş ekranı ───────────────────────────────────────────────────
+GAS_EKRAN = """
+    <!-- E7: Veri Girişi (yalnız Apps Script hedefinde) -->
+    <section id="screen-e7" class="screen" role="tabpanel" aria-labelledby="tab-e7">
+      <div class="crow">
+        <form class="ccard" onsubmit="gonder(event,'uretim')">
+          <h3 class="ctitle">Vardiya Üretimi</h3>
+          <div class="form-grid">
+            <div class="field"><label for="u-tarih">Tarih</label><input id="u-tarih" type="date" required></div>
+            <div class="field"><label for="u-vardiya">Vardiya</label><select id="u-vardiya" required></select></div>
+            <div class="field"><label for="u-hat">Hat</label><select id="u-hat" required onchange="refDoldur()"></select></div>
+            <div class="field"><label for="u-referans">Referans</label><input id="u-referans" type="text" list="ref-list" placeholder="örn. 4432GO"><datalist id="ref-list"></datalist></div>
+            <div class="field"><label for="u-adet">Üretim adedi</label><input id="u-adet" type="number" min="0" step="1" required></div>
+            <div class="field"><label for="u-rework">Rework</label><input id="u-rework" type="number" min="0" step="1" value="0"></div>
+            <div class="field"><label for="u-iskarta">İskarta</label><input id="u-iskarta" type="number" min="0" step="1" value="0"></div>
+          </div>
+          <div class="form-foot">
+            <button class="btn-accent" type="submit">Üretim ekle</button>
+            <span class="form-msg" id="msg-uretim" role="status" aria-live="polite"></span>
+          </div>
+        </form>
+
+        <form class="ccard" onsubmit="gonder(event,'durus')">
+          <h3 class="ctitle">Duruş Kaydı</h3>
+          <div class="form-grid">
+            <div class="field"><label for="d-tarih">Tarih</label><input id="d-tarih" type="date" required></div>
+            <div class="field"><label for="d-vardiya">Vardiya</label><select id="d-vardiya" required></select></div>
+            <div class="field"><label for="d-hat">Hat</label><select id="d-hat" required></select></div>
+            <div class="field"><label for="d-sebep">Sebep</label><input id="d-sebep" type="text" list="sebep-list" required><datalist id="sebep-list"></datalist></div>
+            <div class="field"><label for="d-sure">Süre (dk)</label><input id="d-sure" type="number" min="0.1" step="0.1" required></div>
+            <div class="field"><label for="d-op">OP</label><input id="d-op" type="text" placeholder="örn. 180"></div>
+          </div>
+          <div class="field" style="margin-bottom:var(--dash-space-4)">
+            <label for="d-aciklama">Açıklama</label><input id="d-aciklama" type="text" placeholder="Ne oldu, ne yapıldı">
+          </div>
+          <div class="form-foot">
+            <button class="btn-accent" type="submit">Duruş ekle</button>
+            <span class="form-msg" id="msg-durus" role="status" aria-live="polite"></span>
+          </div>
+        </form>
+      </div>
+
+      <div class="crow">
+        <form class="ccard" onsubmit="gonder(event,'smf')">
+          <h3 class="ctitle">SMF-DOOSAN Günlük</h3>
+          <div class="form-grid">
+            <div class="field"><label for="s-tarih">Tarih</label><input id="s-tarih" type="date" required></div>
+            <div class="field"><label for="s-jx22">JX22</label><input id="s-jx22" type="number" min="0" step="1" value="0"></div>
+            <div class="field"><label for="s-eb2">EB2</label><input id="s-eb2" type="number" min="0" step="1" value="0"></div>
+            <div class="field"><label for="s-doosan">Doosan</label><input id="s-doosan" type="number" min="0" step="1" value="0"></div>
+            <div class="field"><label for="s-nok">NOK</label><input id="s-nok" type="number" min="0" step="1" value="0"></div>
+          </div>
+          <div class="form-foot">
+            <button class="btn-accent" type="submit">SMF ekle</button>
+            <span class="form-msg" id="msg-smf" role="status" aria-live="polite"></span>
+          </div>
+        </form>
+
+        <form class="ccard" onsubmit="gonder(event,'cycle')">
+          <h3 class="ctitle">Cycle Time</h3>
+          <div class="form-grid">
+            <div class="field"><label for="c-hat">Hat</label><select id="c-hat" required></select></div>
+            <div class="field"><label for="c-referans">Referans</label><input id="c-referans" type="text" placeholder="boş = hat varsayılanı"></div>
+            <div class="field"><label for="c-sn">Cycle (sn)</label><input id="c-sn" type="number" min="1" step="0.1" required></div>
+          </div>
+          <div class="form-foot">
+            <button class="btn-accent" type="submit">Kaydet</button>
+            <span class="form-msg" id="msg-cycle" role="status" aria-live="polite"></span>
+          </div>
+          <p class="cnote">Aynı hat + referans varsa güncellenir. TRP doğrudan bu değerden hesaplanır.</p>
+        </form>
+      </div>
+    </section>"""
+
+# ── GAS: form gönderimi ──────────────────────────────────────────────────────
+GAS_JS = """
+// ── Veri girişi (yalnız GAS hedefi) ───────────────────────────────────────
+// Doğrulama sunucuda yapılır; buradaki kontroller yalnız kullanıcıya hızlı
+// geri bildirim içindir, güvenlik sınırı değildir.
+let SECENEK = {hatlar:[],vardiyalar:['A','B','C'],referanslar:{},sebepler:[]};
+const val=id=>document.getElementById(id).value.trim();
+
+const FORMLAR = {
+  uretim:{
+    fn:'uretimEkle',
+    topla:()=>({tarih:val('u-tarih'),vardiya:val('u-vardiya'),hat:val('u-hat'),
+      referans:val('u-referans'),adet:val('u-adet'),rework:val('u-rework'),iskarta:val('u-iskarta')}),
+    temizle:()=>{['u-adet','u-rework','u-iskarta'].forEach(i=>document.getElementById(i).value=i==='u-adet'?'':'0');}
+  },
+  durus:{
+    fn:'durusEkle',
+    topla:()=>({tarih:val('d-tarih'),vardiya:val('d-vardiya'),hat:val('d-hat'),
+      sebep:val('d-sebep'),sure_dk:val('d-sure'),aciklama:val('d-aciklama'),op:val('d-op')}),
+    temizle:()=>{['d-sure','d-aciklama','d-op'].forEach(i=>document.getElementById(i).value='');}
+  },
+  smf:{
+    fn:'smfEkle',
+    topla:()=>({tarih:val('s-tarih'),jx22:val('s-jx22'),eb2:val('s-eb2'),
+      doosan:val('s-doosan'),nok:val('s-nok')}),
+    temizle:()=>{['s-jx22','s-eb2','s-doosan','s-nok'].forEach(i=>document.getElementById(i).value='0');}
+  },
+  cycle:{
+    fn:'cycleKaydet',
+    topla:()=>({hat:val('c-hat'),referans:val('c-referans'),cycle_sn:val('c-sn')}),
+    temizle:()=>{document.getElementById('c-sn').value='';}
+  },
+};
+
+function gonder(ev,tur){
+  ev.preventDefault();
+  const t=FORMLAR[tur], btn=ev.target.querySelector('button[type=submit]'),
+        msg=document.getElementById('msg-'+tur);
+  btn.disabled=true;
+  msg.className='form-msg'; msg.textContent='Kaydediliyor…';
+  google.script.run
+    .withSuccessHandler(function(r){
+      btn.disabled=false;
+      msg.className='form-msg ok'; msg.textContent='✓ '+r.mesaj;
+      t.temizle();
+      veriYukle(true);       // önbelleği atla, grafikler hemen güncellensin
+      secenekleriYukle();
+    })
+    .withFailureHandler(function(e){
+      btn.disabled=false;
+      msg.className='form-msg err'; msg.textContent='✗ '+(e.message||e);
+    })
+    [t.fn](t.topla());
+}
+
+function refDoldur(){
+  const dl=document.getElementById('ref-list');
+  dl.innerHTML='';
+  (SECENEK.referanslar[val('u-hat')]||[]).forEach(r=>{
+    const o=document.createElement('option'); o.value=r; dl.appendChild(o);
+  });
+}
+
+function secenekleriYukle(){
+  google.script.run.withSuccessHandler(function(s){
+    SECENEK=s;
+    doldurSecim(document.getElementById('u-hat'),s.hatlar);
+    doldurSecim(document.getElementById('d-hat'),s.hatlar);
+    doldurSecim(document.getElementById('c-hat'),s.hatlar);
+    doldurSecim(document.getElementById('u-vardiya'),s.vardiyalar);
+    doldurSecim(document.getElementById('d-vardiya'),s.vardiyalar);
+    const sl=document.getElementById('sebep-list'); sl.innerHTML='';
+    s.sebepler.forEach(x=>{const o=document.createElement('option');o.value=x;sl.appendChild(o);});
+    refDoldur();
+  }).secenekleriGetir();
+}
+
+function buildE7(){
+  const bugun=new Date().toISOString().slice(0,10);
+  ['u-tarih','d-tarih','s-tarih'].forEach(i=>{
+    const el=document.getElementById(i); if(!el.value) el.value=bugun;
+  });
+  if(!SECENEK.hatlar.length) secenekleriYukle();
+}"""
+
 
 # ── Grafik serisi paleti (design.md §2.5) ────────────────────────────────────
 # §2.5 yedi seri tanımlar; bu dashboard'da dokuz hat var, o yüzden palet aynı
@@ -142,23 +305,10 @@ chart_tag = '\n  '.join([
 ])
 font_css = build_font_css()
 
-html = f"""<!DOCTYPE html>
-<html lang="tr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>DMF Daily – Üretim Dashboard</title>
-  <script>
-    /* design.md §2.4 — OS tercihi varsayılan, kullanıcı seçimi localStorage'da.
-       Render'dan önce çalışır ki açılışta tema atlaması olmasın. */
-    (function(){{
-      var saved=null; try{{saved=localStorage.getItem('valeo-theme');}}catch(e){{}}
-      var prefersDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;
-      document.documentElement.setAttribute('data-theme', saved || (prefersDark?'dark':'light'));
-    }})();
-  </script>
-  {chart_tag}
-  <style>
+
+# ── Stil (design.md §2-§7) ───────────────────────────────────────────────────
+# GAS hedefinde bu blok styles.html olarak ayrı yazılır (design.md §10).
+css = f"""
     {font_css}
 
     *,*::before,*::after{{box-sizing:border-box;margin:0;padding:0}}
@@ -317,6 +467,27 @@ html = f"""<!DOCTYPE html>
       transition:background var(--md-sys-motion-duration-short) var(--md-sys-motion-easing-standard);
     }}
     .btn-tonal:hover{{background:var(--md-sys-color-surface-container-highest)}}
+    /* §8 "Aksan (nadir/kilit eylem)" — form gönderimi. Dolu primary buton
+       koyu temada beyaz metinle AA'yı geçmiyor (§2.1 zaten uyarıyor), bu yüzden
+       kilit eylem tertiary-container ile verilir. */
+    .btn-accent{{
+      background:var(--md-sys-color-tertiary-container);
+      color:var(--md-sys-color-on-tertiary-container);
+      border:none;border-radius:var(--md-sys-shape-corner-full);
+      padding:10px var(--dash-space-6);min-height:48px;
+      font:700 14px/20px var(--font-plain);cursor:pointer;
+      transition:filter var(--md-sys-motion-duration-short) var(--md-sys-motion-easing-standard);
+    }}
+    .btn-accent:hover{{filter:brightness(.94)}}
+    .btn-accent[disabled]{{opacity:.5;cursor:progress}}
+    .form-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+               gap:var(--dash-space-4);margin-bottom:var(--dash-space-4)}}
+    .form-foot{{display:flex;align-items:center;gap:var(--dash-space-4);flex-wrap:wrap}}
+    .form-msg{{font:400 14px/20px var(--font-plain)}}
+    .form-msg.ok{{color:var(--dash-color-success)}}
+    .form-msg.err{{color:var(--md-sys-color-error)}}
+    .yukleniyor{{padding:var(--dash-space-8);text-align:center;
+                color:var(--md-sys-color-on-surface-variant);font:400 16px/24px var(--font-plain)}}
 
     .shell{{display:grid;grid-template-columns:88px 1fr;min-height:calc(100vh - 57px)}}
 
@@ -508,7 +679,67 @@ html = f"""<!DOCTYPE html>
       .appbar h1{{font-size:17px;line-height:24px}}
       .appbar .upd{{display:none}}
     }}
-  </style>
+"""
+
+# ── Hedef ─────────────────────────────────────────────────────────────────────
+# static : tek dosya, veri gömülü, GitHub Pages'e uygun
+# gas    : Google Apps Script — veri Sheet'ten gelir, formlarla yazılabilir
+TARGET = 'gas' if '--gas' in sys.argv else 'static'
+
+if TARGET == 'static':
+    style_tag      = '<style>\n' + css + '\n  </style>'
+    data_bootstrap = 'const D        = ' + data_js + ';'
+    init_cagri     = 'baslat();'
+    ek_tab = ek_build = ek_ekran = ek_js = ''
+else:
+    style_tag      = "<?!= include('styles'); ?>"
+    # Veri sunucudan gelir; D sabit değil.
+    data_bootstrap = 'let D = null;'
+    init_cagri     = """// GAS: veri sunucudan asenkron gelir.
+// Durum mesajı <main>'in başına eklenir; ekran içeriği EZİLMEZ — aksi halde
+// buildE1() kendi kapsayıcılarını (kpi-grid, canvas'lar) bulamaz.
+function durumGoster(metin, hataMi){
+  let el=document.getElementById('yukleniyor');
+  if(!el){
+    el=document.createElement('p'); el.id='yukleniyor'; el.className='yukleniyor';
+    el.setAttribute('role','status'); el.setAttribute('aria-live','polite');
+    document.querySelector('main').prepend(el);
+  }
+  el.textContent=metin;
+  el.style.color = hataMi ? 'var(--md-sys-color-error)' : '';
+}
+function durumGizle(){ const el=document.getElementById('yukleniyor'); if(el) el.remove(); }
+
+function veriYukle(zorla){
+  google.script.run
+    .withSuccessHandler(function(d){ durumGizle(); D=d; baslat(); })
+    .withFailureHandler(function(e){ durumGoster('Veri yüklenemedi: '+(e.message||e), true); })
+    .verileriGetir(!!zorla);
+}
+durumGoster('Veriler yükleniyor…', false);
+veriYukle(false);"""
+    ek_tab   = "  ['e7','📝','Veri Girişi'],\n"
+    ek_build = ',e7:buildE7'
+    ek_ekran = GAS_EKRAN
+    ek_js    = GAS_JS
+
+html = f"""<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>DMF Daily – Üretim Dashboard</title>
+  <script>
+    /* design.md §2.4 — OS tercihi varsayılan, kullanıcı seçimi localStorage'da.
+       Render'dan önce çalışır ki açılışta tema atlaması olmasın. */
+    (function(){{
+      var saved=null; try{{saved=localStorage.getItem('valeo-theme');}}catch(e){{}}
+      var prefersDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.setAttribute('data-theme', saved || (prefersDark?'dark':'light'));
+    }})();
+  </script>
+  {chart_tag}
+  {style_tag}
 </head>
 <body>
 
@@ -613,10 +844,11 @@ html = f"""<!DOCTYPE html>
         </div>
       </div>
     </section>
+{ek_ekran}
   </main>
 </div>
 <script>
-const D           = {data_js};
+{data_bootstrap}
 const HC_DARK     = {hat_dark_js};
 const HC_LIGHT    = {hat_light_js};
 const SER_DARK    = {series_dark_js};
@@ -741,7 +973,7 @@ function mk(id,cfg){{
 const TABS=[
   ['e1','📊','KPI Özet'],   ['e2','📈','Üretim Trendi'], ['e3','🔀','Vardiya'],
   ['e4','🏷','Referans'],   ['e5','⏱','Duruş Analizi'],  ['e6','📋','Duruş Detay'],
-];
+{ek_tab}];
 const rail=document.getElementById('rail');
 TABS.forEach(([id,icon,label],i)=>{{
   const b=document.createElement('button');
@@ -763,8 +995,6 @@ function T(id){{
 function ensure(id){{ if(DIRTY.has(id)){{ BUILD[id](); DIRTY.delete(id); }} }}
 
 // ── E1: KPI ───────────────────────────────────────────────────────────────
-document.getElementById('upd-date').textContent='Son güncelleme: '+D.meta.guncelleme;
-
 function buildE1(){{
   const g=document.getElementById('kpi-grid'); g.innerHTML='';
   D.meta.hatlar.forEach(hat=>{{
@@ -855,7 +1085,6 @@ function updTrend(){{
 
 // ── E3: Vardiya ─────────────────────────────────────────────────────────────
 const vrdSel=document.getElementById('vrd-hat-sel');
-D.meta.hatlar.forEach(h=>{{const o=document.createElement('option');o.value=h;o.textContent=h;vrdSel.appendChild(o);}});
 function renderVardiya(){{
   const hat=vrdSel.value||D.meta.hatlar[0];
   const vc=D.vardiya_chart[hat];
@@ -887,7 +1116,6 @@ function renderVardiya(){{
 
 // ── E4: Referans ─────────────────────────────────────────────────────────────
 const refSel=document.getElementById('ref-hat-sel');
-D.meta.hatlar.forEach(h=>{{const o=document.createElement('option');o.value=h;o.textContent=h;refSel.appendChild(o);}});
 function renderRef(){{
   const hat=refSel.value||D.meta.hatlar[0];
   const r=D.ref_top[hat];
@@ -972,8 +1200,6 @@ function buildE5(){{
 
 // ── E6: Duruş Detay ───────────────────────────────────────────────────────
 const hSel=document.getElementById('f-hat'),sSel=document.getElementById('f-sebep');
-[...new Set(D.son_duruslar.map(r=>r.hat))].sort().forEach(h=>{{const o=document.createElement('option');o.value=h;o.textContent=h;hSel.appendChild(o);}});
-[...new Set(D.son_duruslar.map(r=>r.sebep))].sort().forEach(s=>{{const o=document.createElement('option');o.value=s;o.textContent=s;sSel.appendChild(o);}});
 let _fltT;
 function fltDebounced(){{clearTimeout(_fltT);_fltT=setTimeout(flt,120);}}
 function flt(){{
@@ -998,18 +1224,50 @@ function flt(){{
 }}
 
 // ── başlat ────────────────────────────────────────────────────────────────
-const BUILD={{e1:buildE1,e2:buildE2,e3:renderVardiya,e4:renderRef,e5:buildE5,e6:flt}};
+const BUILD={{e1:buildE1,e2:buildE2,e3:renderVardiya,e4:renderRef,e5:buildE5,e6:flt{ek_build}}};
 const DIRTY=new Set(Object.keys(BUILD));
 let ACTIVE='e1';
-ensure('e1');
+
+// D'ye bağlı her şey burada kurulur. Statik hedefte D zaten gömülüdür ve
+// baslat() hemen çağrılır; GAS hedefinde sunucudan geldikten sonra çağrılır.
+function doldurSecim(sel,degerler){{
+  sel.innerHTML='';
+  degerler.forEach(v=>{{const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);}});
+}}
+function baslat(){{
+  document.getElementById('upd-date').textContent='Son güncelleme: '+D.meta.guncelleme;
+  doldurSecim(vrdSel,D.meta.hatlar);
+  doldurSecim(refSel,D.meta.hatlar);
+  hSel.innerHTML='<option value="">Tüm hatlar</option>';
+  [...new Set(D.son_duruslar.map(r=>r.hat))].sort().forEach(h=>{{const o=document.createElement('option');o.value=h;o.textContent=h;hSel.appendChild(o);}});
+  sSel.innerHTML='<option value="">Tüm sebepler</option>';
+  [...new Set(D.son_duruslar.map(r=>r.sebep))].sort().forEach(s=>{{const o=document.createElement('option');o.value=s;o.textContent=s;sSel.appendChild(o);}});
+  Object.keys(BUILD).forEach(k=>DIRTY.add(k));
+  ensure(ACTIVE);
+}}
+{ek_js}
+{init_cagri}
 </script>
 </body>
 </html>"""
 
-with open(OUTPUT_PATH,'w',encoding='utf-8') as f:
-    f.write(html)
+def yaz_(yol, icerik):
+    os.makedirs(os.path.dirname(yol), exist_ok=True)
+    with open(yol, 'w', encoding='utf-8') as fh:
+        fh.write(icerik)
+    print(f"  ✓ {os.path.relpath(yol, BASE_DIR):32s} {len(icerik.encode('utf-8'))//1024:>4d} KB")
 
-print(f"\n✓ {OUTPUT_PATH}")
-print(f"  Dosya boyutu: {len(html.encode('utf-8'))//1024} KB")
-print(f"  Haftalar: {data_json['haftalik_etiket'][0]} → {data_json['haftalik_etiket'][-1]}")
-print(f"  Duruş kaydı: {len(data_json['son_duruslar'])}")
+
+if TARGET == 'static':
+    print(f"Hedef: static — tek dosya, veri gömülü")
+    yaz_(OUTPUT_PATH, html)
+    print(f"  Haftalar: {data_json['haftalik_etiket'][0]} → {data_json['haftalik_etiket'][-1]}")
+    print(f"  Duruş kaydı: {len(data_json['son_duruslar'])}")
+else:
+    # design.md §10: ortak stiller styles.html içinde toplanır, <head>'den
+    # <?!= include('styles'); ?> ile çağrılır.
+    print("Hedef: gas — Apps Script; veri Sheet'ten gelir")
+    yaz_(os.path.join(GAS_DIR, 'styles.html'), '<style>\n' + css + '\n</style>\n')
+    yaz_(os.path.join(GAS_DIR, 'index.html'), html)
+    print("\n  Yükleme:  cd apps-script && clasp push")
+    print("  Kurulum : Apps Script düzenleyicisinde kurulum() fonksiyonunu bir kez çalıştırın")

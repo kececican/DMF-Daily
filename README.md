@@ -35,7 +35,23 @@ Teorik Maksimum = (480 dk × 60 sn) / Cycle Time (sn)
 | PFW1–4 | 50 sn |
 | ITL | 56 sn |
 
-## Kurulum & Kullanım
+## İki çalışma biçimi
+
+| | Statik (GitHub Pages) | Apps Script (Google Sheets) |
+|---|---|---|
+| Veri kaynağı | `dashboard/data.json` | Google Sheet |
+| Veri ekleme | ❌ yalnız Excel'den | ✅ **dashboard içindeki formlardan** |
+| Erişim | herkese açık link | şirket Google hesabı |
+| Kurulum | yok | `apps-script/KURULUM.md` |
+
+Arayüz her ikisinde de aynı kaynaktan üretilir:
+
+```bash
+python3 generate_dashboard.py         # → dashboard/index.html   (statik)
+python3 generate_dashboard.py --gas   # → apps-script/index.html + styles.html
+```
+
+## Kurulum & Kullanım (statik)
 
 Üretim iki adıma ayrılmıştır: **veri ayıklama** ve **sunum**.
 
@@ -103,6 +119,18 @@ DMF-Daily/
 ├── extract_excel.py               # Excel → data.json  (openpyxl gerekir)
 ├── generate_dashboard.py          # data.json → index.html  (bağımlılıksız)
 ├── design.md                      # Valeo Tasarım Sistemi (M3E uyarlaması)
+├── apps-script/                   # Google Apps Script sürümü (veri girişli)
+│   ├── KURULUM.md                       # kurulum adımları
+│   ├── Kod.gs                           # doGet, okuma/yazma, doğrulama
+│   ├── Toplama.gs                       # Sheet satırları → dashboard JSON
+│   ├── index.html · styles.html         # ÜRETİLEN — generate_dashboard.py --gas
+│   └── appsscript.json
+├── tools/
+│   ├── excel_to_csv.py            # Excel → normalize CSV (Sheet'e aktarım)
+│   ├── datajson_to_csv.py         # data.json → CSV (Excel yoksa)
+│   ├── test_toplama.js            # toplama çekirdeği testleri
+│   ├── test_kod.js                # sunucu doğrulama testleri
+│   └── test_gas_ui.js             # uçtan uca arayüz testi
 ├── vendor/
 │   ├── chart.umd.min.js                 # Chart.js 4.4.0
 │   ├── chartjs-plugin-datalabels.min.js # datalabels 2.2.0
@@ -111,6 +139,17 @@ DMF-Daily/
     ├── data.json               # Ayıklanmış veri (Excel'den bağımsız cache)
     └── index.html              # Tek dosya, standalone dashboard
 ```
+
+## Testler
+
+```bash
+node tools/test_toplama.js   # toplama: gerçek 1074 duruş kaydı + sentetik üretim
+node tools/test_kod.js       # sunucu: doğrulama, çift kayıt, önbellek, kilit
+node tools/test_gas_ui.js    # uçtan uca: form → sunucu → toplama → grafik
+```
+
+Son test `google.script.run` çağrılarını Node'daki gerçek `Kod.gs`'e
+köprüler (Google API'leri taklit, Sheet bellekte) ve Chromium'da çalıştırır.
 
 ## Veri Kaynakları
 
